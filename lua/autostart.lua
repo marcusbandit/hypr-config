@@ -11,6 +11,17 @@
 -- so on. `hl.on("hyprland.start", ...)` does not fire during verification, so
 -- checking the config stays free of side effects. Nothing may be lifted out of
 -- this function.
+--
+-- Not carried over from exec.conf, and not by accident:
+--
+--   launch-caelestia          caelestia is not the shell anymore, banditshell
+--                             is. Starting both races two shells for the same
+--                             layer surfaces.
+--   awww-daemon --format xrgb wallpaper daemon belonging to that old shell.
+--   hypr-game-caps-watcher    not wanted.
+--
+-- This list is host-independent on purpose: everything below runs on both
+-- machines, so there is nothing here for lua/host.lua to branch on.
 --------------------------------------------------------------------------------
 
 hl.on("hyprland.start", function()
@@ -40,4 +51,10 @@ hl.on("hyprland.start", function()
     -- qBittorrent. Started after banditshell so the tray host (services/Tray.qml)
     -- is already registered as the SNI watcher when Qt looks for it.
     hl.exec_cmd("qbittorrent --no-splash")
+
+    -- Music. rules.lua parks spotify on the special:music workspace and
+    -- monitors.lua pins that workspace to the vertical side panel, so this
+    -- comes up out of the way and SUPER+tab pulls it into view. Last in the
+    -- list because nothing else waits on it.
+    hl.exec_cmd("spotify")
 end)

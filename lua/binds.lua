@@ -126,9 +126,6 @@ hl.bind("SUPER + RETURN",    hl.dsp.exec_cmd(terminal))
 
 -- #! Utils
 
--- Network
-hl.bind("SUPER + I", hl.dsp.exec_cmd("~/bin/wifi-menu")) -- Wi-Fi menu (connect to any network)
-
 -- Shell
 hl.bind("SUPER + P", hl.dsp.exec_cmd("banditshell session toggle")) -- Toggle Power Menu
 hl.bind("SUPER + L", hl.dsp.exec_cmd("loginctl lock-session"))      -- Lock the session

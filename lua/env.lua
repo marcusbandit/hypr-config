@@ -11,6 +11,8 @@
 -- revived wholesale, so each can be switched on one at a time.
 --------------------------------------------------------------------------------
 
+local host = require("lua.host")
+
 local home = os.getenv("HOME") or "/home/bandit"
 
 --------------------------------------------------------------------------------
@@ -48,13 +50,47 @@ hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 --------------------------------------------------------------------------------
--- GPU note (no variable set on purpose)
+-- GPU, per host
 --
--- AMD Radeon 840M (Krackan iGPU). No NVIDIA hardware on this box.
--- Deliberately NOT setting LIBVA_DRIVER_NAME; mesa autodetects radeonsi.
--- A stale LIBVA_DRIVER_NAME=nvidia here broke VAAPI entirely and silently
--- forced ffmpeg onto the libx264 CPU fallback (AniBeam transcodes ate 12 cores).
+-- This is the one env block that genuinely has to branch, because the two
+-- machines sharing this file do not agree about graphics at all:
+--
+--   kangaeru   AMD Radeon 840M (Krackan iGPU), no NVIDIA hardware. Sets
+--              NOTHING on purpose. mesa autodetects radeonsi, and a stale
+--              LIBVA_DRIVER_NAME=nvidia here broke VAAPI entirely and silently
+--              forced ffmpeg onto the libx264 CPU fallback (AniBeam transcodes
+--              ate 12 cores). That incident is why this block is host-gated
+--              instead of unconditional.
+--
+--   banditbox  NVIDIA RTX 3090. Needs the block below, or GBM, VAAPI and the
+--              GLX vendor selection each guess and each guess wrong.
+--
+-- Anything not named gets kangaeru's treatment (set nothing), which is the safe
+-- default in both directions: an unset variable lets the driver stack work it
+-- out, a wrongly-set one cannot be recovered from at runtime.
 --------------------------------------------------------------------------------
+
+if host.is("banditbox") then
+    -- Ported from the "NVIDIA specific settings" block of hyprland/env.conf.
+    -- Unlike most of that file these were written in the comma form, so they
+    -- were genuinely live under hyprlang and are restored as they stood.
+    hl.env("LIBVA_DRIVER_NAME", "nvidia")           -- VAAPI through nvidia's driver
+    hl.env("GBM_BACKEND", "nvidia-drm")             -- buffer allocation via nvidia-drm
+    hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")   -- libglvnd picks the nvidia GLX
+    hl.env("NVD_BACKEND", "direct")                 -- NVDEC direct backend, not the EGL path
+
+    -- Both off deliberately, and NOT in conflict with `vrr = 1` on the ultrawide
+    -- in lua/monitors.lua: these two tell the NVIDIA GL driver to keep its hands
+    -- off adaptive sync so the compositor is the only thing driving it. Two
+    -- layers both trying to own VRR is what produces the flicker.
+    hl.env("__GL_VRR_ALLOWED", "0")
+    hl.env("__GL_GSYNC_ALLOWED", "0")
+end
+
+-- That same .conf block also carried `env = XDG_SESSION_TYPE, wayland`, which
+-- IS the live comma form and so really was being set. It is still not ported:
+-- it has nothing to do with the GPU, and the session already exports exactly
+-- that value, so setting it again is redundant rather than useful.
 
 --------------------------------------------------------------------------------
 -- Never actually applied (the `NAME=value` form hyprlang ignored)
@@ -96,7 +132,9 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 --       Wayland client launched from here fail to connect.
 --
 -- The remaining XDG_* lines in env.conf (CURRENT_DESKTOP, SESSION_DESKTOP,
--- SESSION_TYPE, CONFIG_HOME, DATA_HOME, CACHE_HOME, STATE_HOME) were also
--- inert, and the session already sets all of them to exactly these values, so
--- they are redundant rather than useful.
+-- SESSION_TYPE, CONFIG_HOME, DATA_HOME, CACHE_HOME, STATE_HOME) are dropped
+-- too, but for a milder reason: the session already sets all of them to exactly
+-- these values, so they are redundant rather than useful. All were inert
+-- `NAME=value` lines except SESSION_TYPE, which appeared a second time inside
+-- the NVIDIA block in the live comma form.
 --------------------------------------------------------------------------------
