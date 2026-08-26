@@ -50,6 +50,15 @@ hl.on("hyprland.start", function()
 
     -- qBittorrent. Started after banditshell so the tray host (services/Tray.qml)
     -- is already registered as the SNI watcher when Qt looks for it.
+    --
+    -- Comes up with no window at all: General\StartMinimized in
+    -- ~/.config/qBittorrent/qBittorrent.conf sends it straight to the tray.
+    -- That setting lives in qBittorrent's own config rather than here because
+    -- there is no CLI flag for it, and a window rule cannot express it either
+    -- (a rule can only place a window that exists). When the tray icon or
+    -- SUPER+T does bring the window up, rules.lua parks it on
+    -- special:torrents. NOTE: qBittorrent rewrites qBittorrent.conf on exit,
+    -- so edit that file only while it is stopped.
     hl.exec_cmd("qbittorrent --no-splash")
 
     -- Music. rules.lua parks spotify on the special:music workspace and

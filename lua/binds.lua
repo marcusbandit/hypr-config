@@ -45,6 +45,10 @@ end
 
 hl.bind("SUPER + grave", hl.dsp.workspace.toggle_special("communication"))
 hl.bind("SUPER + tab",   hl.dsp.workspace.toggle_special("music"))
+-- T for torrents. SUPER+SHIFT+T is the screenshot OCR bind, so the matching
+-- "move window there" bind below uses ALT instead of SHIFT and breaks the
+-- toggle/SHIFT+toggle pattern the other two specials follow.
+hl.bind("SUPER + T",     hl.dsp.workspace.toggle_special("torrents"))
 
 
 -- #! Window
@@ -76,6 +80,7 @@ end
 
 hl.bind("SUPER + SHIFT + grave", hl.dsp.window.move({ workspace = "special:communication" }))
 hl.bind("SUPER + SHIFT + tab",   hl.dsp.window.move({ workspace = "special:music" }))
+hl.bind("SUPER + ALT + T",       hl.dsp.window.move({ workspace = "special:torrents" }))
 
 -- Move / Resize with mouse
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(),   { mouse = true })

@@ -196,17 +196,42 @@ hl.window_rule({
     rounding    = 0,
 })
 
--- Spotify - transparency and special workspace
+-- Spotify - transparency and special workspace.
+--
+-- The class is "Spotify", capital S. The old hyprlang tree carried both
+-- spellings (windowrules.conf had it right, rules.conf did not) and the Lua
+-- port inherited the lowercase one, so neither rule matched anything and
+-- Spotify came up on whatever workspace was focused at boot. A window rule
+-- that never matches fails silently, and --verify-config cannot catch it
+-- because the regex itself is valid. Matching both cases means a rename
+-- upstream cannot quietly break it again.
 hl.window_rule({
     name    = "spotify-opacity",
-    match   = { class = "^(spotify)$" },
+    match   = { class = "^([Ss]potify)$" },
     opacity = "0.9 override",
 })
 
+-- "silent" keeps the workspace switch from following the window: Spotify is
+-- autostarted at boot, and without it the special workspace pops open over
+-- whatever is on screen. It is a suffix on the workspace VALUE, not a rule
+-- field of its own; `silent = true` is rejected as an unknown field.
 hl.window_rule({
     name      = "spotify-workspace",
-    match     = { class = "^(spotify)$" },
-    workspace = "special:music",
+    match     = { class = "^([Ss]potify)$" },
+    workspace = "special:music silent",
+})
+
+-- qBittorrent - special workspace.
+--
+-- The class is the reverse-DNS app id, not "qbittorrent". qBittorrent itself
+-- is set to start minimised to the tray (Preferences > Behaviour), so at boot
+-- there is no window for this rule to place; it applies when the tray icon or
+-- SUPER+T brings the window up, and parks it on special:torrents rather than
+-- on top of whatever is in front of you. Same "silent" reasoning as Spotify.
+hl.window_rule({
+    name      = "qbittorrent-workspace",
+    match     = { class = "^(org\\.qbittorrent\\.qBittorrent)$" },
+    workspace = "special:torrents silent",
 })
 
 -- Vesktop (Discord) - special workspace
