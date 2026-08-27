@@ -122,7 +122,12 @@ hl.bind("XF86Calculator", hl.dsp.exec_cmd("banditshell calculator toggle"), { lo
 hl.bind("SUPER + B", hl.dsp.exec_cmd(browser))
 
 hl.bind("SUPER + SHIFT + B", hl.dsp.exec_cmd(browser .. " --private-window"))
-hl.bind("SUPER + E",         hl.dsp.exec_cmd(terminal .. " -e " .. filemanager))
+-- The shell's own file browser (banditshell modules/files/), rather than yazi in
+-- a terminal window. It is a real window, so it could be given a path -
+-- `banditshell files toggle <dir>` opens there - but bare it opens wherever it
+-- was left, which is what a toggle means everywhere else in this file.
+-- Was: hl.dsp.exec_cmd(terminal .. " -e " .. filemanager)
+hl.bind("SUPER + E",         hl.dsp.exec_cmd("banditshell files toggle"))
 hl.bind("SUPER + RETURN",    hl.dsp.exec_cmd(terminal))
 
 -- Copilot key: remapped to a plain Super modifier by keyd (/etc/keyd/default.conf).
