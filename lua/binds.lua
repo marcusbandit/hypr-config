@@ -284,6 +284,27 @@ hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
 
+-- Sound
+
+-- SPEAKERS OR HEADPHONES, on the numpad's own zero.
+--
+-- Which two devices those are is a banditshell setting rather than anything
+-- this file knows (Settings > Sound, or `banditshell output assign`), because
+-- the pair is different on every machine this config runs on and a sink name
+-- baked in here would be a keybind that silently does nothing on the other box.
+--
+-- BOUND TWICE FOR ONE KEY. The numpad zero is not one keysym: with numlock on
+-- it is KP_0 and with numlock off it is KP_Insert, and Hyprland matches on the
+-- keysym the layout resolves rather than on the key. numlock_by_default is
+-- true in lua/input.lua so KP_0 is the live one nearly always, and the day
+-- numlock gets turned off the bind should not quietly stop working. The spare
+-- costs nothing: Hyprland never fires a bind whose keysym the layout cannot
+-- resolve, the same argument the XF86Calculator bind above makes.
+for _, key in ipairs({ "KP_0", "KP_Insert" }) do
+    hl.bind("SUPER + " .. key, hl.dsp.exec_cmd("banditshell output toggle")) -- Speakers <-> headphones
+end
+
+
 -- #! Submaps
 
 -- (The xhisper dictation submap lived here. It is gone along with the bind that
