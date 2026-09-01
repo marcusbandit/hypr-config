@@ -9,6 +9,8 @@
 -- `input:touchpad:natural_scroll` is just `input.touchpad.natural_scroll` here.
 --------------------------------------------------------------------------------
 
+local host = require("lua.host")
+
 hl.config({
     input = {
         -- Two layouts, US primary and Danish secondary; `grp:switch` below is
@@ -47,3 +49,36 @@ hl.config({
 -- port: no gesture was ever configured. Left as this note rather than an
 -- invented `hl.gesture` call, so the absence stays deliberate and visible.
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- TABLET MAPPING
+--
+-- A tablet is an ABSOLUTE device: its surface maps corner-to-corner onto
+-- whatever it is pointed at. Pointed at the whole ultrawide that means a
+-- 224x148mm surface stretched across 5120x1440, so a circle drawn on the tablet
+-- comes out 2.35x too wide on screen and the pen crosses a metre of glass for a
+-- centimetre of movement. Mapping it to a slice of the panel that carries the
+-- tablet's OWN aspect fixes both.
+--
+-- The width is computed rather than written down: hardcoding 2179 means the
+-- mapping silently goes wrong the day the panel or the tablet changes.
+--
+-- On Wayland there is no xsetwacom and OpenTabletDriver does not do Bluetooth,
+-- so the compositor is the only thing that can do this.
+--------------------------------------------------------------------------------
+
+if host.is("banditbox") then
+    local surface = { w = 224, h = 148 }   -- Intuos Pro M active area, mm
+    local panel   = { w = 5120, h = 1440 } -- HDMI-A-1
+
+    local region_w = math.floor(panel.h * surface.w / surface.h + 0.5)
+
+    hl.device({
+        name            = "wacom-intuos-pro-m-pen",
+        output          = "HDMI-A-1",
+        -- Centred horizontally, full panel height. Relative to the output's
+        -- own top-left, not the global layout origin.
+        region_position = string.format("%d 0", math.floor((panel.w - region_w) / 2)),
+        region_size     = string.format("%d %d", region_w, panel.h),
+    })
+end
