@@ -136,17 +136,12 @@ end
 -- Derived gradients
 --------------------------------------------------------------------------------
 
---- Active: a specular sweep. dark body -> verdigris -> white spike -> lush ->
---- back to dark. Full alpha keeps the highlight crisp against the blur.
---- Five stops so the bright one reads as a highlight sliding along a metal
---- edge, not as a two-colour fade.
+--- Active: calm two-stop gradient between the dark border metal and the accent.
+--- The bright white specular spike is removed to make it less flashy.
 M.border_active = {
     colors = {
         M.rgba("dark", "ff"),
         M.rgba("verdigris", "ff"),
-        M.rgba("white", "ff"),
-        M.rgba("lush", "ff"),
-        M.rgba("body", "ff"),
     },
     angle = 45,
 }
