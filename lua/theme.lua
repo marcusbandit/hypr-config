@@ -151,14 +151,8 @@ M.border_active = {
     angle = 45,
 }
 
---- Inactive: the same metal with no light on it. Low chroma, translucent.
-M.border_inactive = {
-    colors = {
-        M.rgba("abyss", "aa"),
-        M.rgba("border_lit", "aa"),
-    },
-    angle = 45,
-}
+--- Inactive: fully transparent so unfocused windows have no visible border.
+M.border_inactive = "rgba(00000000)"
 
 --- Shadow: carries the palette hue rather than a neutral black, so the cast
 --- reads as darker metal instead of a grey smudge under the window.
@@ -210,7 +204,7 @@ M.rounding = {
 -- read as part of the same metal set: mint for floating, brass for pinned.
 --------------------------------------------------------------------------------
 
-M.floating = { active = M.rgb("mint"), inactive = M.rgb("mint_dim") }
-M.pinned   = { active = M.rgb("brass"), inactive = M.rgb("brass_dim") }
+M.floating = { active = M.rgb("mint"), inactive = "rgba(00000000)" }
+M.pinned   = { active = M.rgb("brass"), inactive = "rgba(00000000)" }
 
 return M
