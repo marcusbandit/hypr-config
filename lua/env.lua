@@ -41,7 +41,7 @@ hl.env("XCURSOR_THEME", "Bibata-Modern-DodgerBlue")
 hl.env("XCURSOR_SIZE", "24")
 
 -- Terminal for desktop entries with Terminal=true
-hl.env("TERMINAL", "kitty")
+hl.env("TERMINAL", "ghostty")
 
 -- Firefox/Zen Wayland support
 hl.env("MOZ_ENABLE_WAYLAND", "1")

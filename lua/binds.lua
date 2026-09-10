@@ -8,7 +8,7 @@
 --   bindd  -> { description = "..." }
 
 -- Program variables, from hyprland.conf. Only the ones the binds actually use.
-local terminal    = "kitty"
+local terminal    = "ghostty"
 local browser     = "zen-browser"
 local filemanager = "yazi"
 
@@ -211,7 +211,7 @@ hl.bind("SUPER + W",         hl.dsp.exec_cmd("banditshell wallpaper toggle"))   
 
 -- Task manager. Long brackets again: three quoted arguments, one of them with && inside.
 hl.bind("CTRL + SHIFT + grave", hl.dsp.exec_cmd(
-    [[~/.config/hypr/hyprland/scripts/launch_first_available.sh "gnome-system-monitor" "plasma-systemmonitor --page-name Processes" "command -v btop && kitty -1 fish -c btop"]]
+    [[~/.config/hypr/hyprland/scripts/launch_first_available.sh "gnome-system-monitor" "plasma-systemmonitor --page-name Processes" "command -v btop && ghostty -e fish -c btop"]]
 ))
 
 -- Cursor (mouse via keyboard). Deltas come from the direction table times the step.
