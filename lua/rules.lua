@@ -173,6 +173,15 @@ hl.window_rule({
     workspace = "1",
 })
 
+-- Fleet viewer kiosk (fleet-viewer project). The class is "firefox" but this is
+-- the dedicated kiosk profile only, never the daily browser, which is zen. The
+-- kiosk window belongs on ws 6, the vertical side panel.
+hl.window_rule({
+    name      = "fleet-viewer-kiosk",
+    match     = { class = "^(firefox)$" },
+    workspace = "6",
+})
+
 --------------------------------------------------------------------------------
 -- DEVELOPMENT TOOLS
 --------------------------------------------------------------------------------

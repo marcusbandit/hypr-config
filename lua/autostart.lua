@@ -24,6 +24,8 @@
 -- machines, so there is nothing here for lua/host.lua to branch on.
 --------------------------------------------------------------------------------
 
+local host = require("lua.host")
+
 hl.on("hyprland.start", function()
     -- Set up DBus activation environment first so everything that follows gets a complete environment
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
@@ -66,4 +68,10 @@ hl.on("hyprland.start", function()
     -- comes up out of the way and SUPER+tab pulls it into view. Last in the
     -- list because nothing else waits on it.
     hl.exec_cmd("spotify")
+
+    -- Fleet viewer kiosk: the dashboard owns ws 6 on the vertical side panel.
+    -- banditbox only; kangaeru has no second monitor for it.
+    if host.is("banditbox") then
+        hl.exec_cmd("~/.local/bin/fleet-viewer-kiosk")
+    end
 end)
