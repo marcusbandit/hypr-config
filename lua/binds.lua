@@ -63,6 +63,13 @@ hl.bind("SUPER + S",         hl.dsp.window.float({ action = "toggle" }))        
 hl.bind("SUPER + F",         hl.dsp.layout("fit active"))                       -- Rescales the current window to fit the entire screen
 hl.bind("SUPER + SHIFT + F", hl.dsp.layout("fit visible"))                      -- Rescales all the visible windows on the screen to fit the screen
 
+-- 16:9 the focused window: full monitor height, width derived from the
+-- ratio, centered on the monitor it lives on. A toggle: the second press puts
+-- the window's own size, position and floating state back. A script rather
+-- than a chain of dispatchers so the same toggle is callable from anywhere
+-- (other scripts, other keys, a shell): hypr-16x9(1).
+hl.bind("SUPER + SHIFT + D", hl.dsp.exec_cmd("hypr-16x9"), { description = "Toggle 16:9 fit for the focused window" })
+
 -- Layout
 for _, d in ipairs(directions) do
     hl.bind("SUPER + SHIFT + " .. d.key, hl.dsp.window.move({ direction = d.name }), { repeating = true })
@@ -158,7 +165,9 @@ hl.bind("SUPER + SHIFT + ESCAPE", hl.dsp.exec_cmd("banditshell close")) -- Shut 
 
 -- banditshell has no sidebar drawer, dashboard or hideable bar yet, so these
 -- three have nothing to talk to now that caelestia is no longer the shell. Left
--- here rather than deleted, as the list of what still has to be built.
+-- here rather than deleted, as the list of what still has to be built. The
+-- dashboard chord is no longer spare either: SUPER + SHIFT + D now fits the
+-- focused window to 16:9 (see #! Window), so a future dashboard needs a key.
 -- hl.bind("SUPER + N",         hl.dsp.exec_cmd("caelestia shell drawers toggle sidebar"))   -- Toggle Notification panel
 -- hl.bind("SUPER + SHIFT + D", hl.dsp.exec_cmd("caelestia shell drawers toggle dashboard")) -- Toggle Dashboard
 -- hl.bind("SUPER + Z",         hl.dsp.exec_cmd("caelestia shell bar togglePersistent"))     -- Toggle Bar
