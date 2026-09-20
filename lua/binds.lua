@@ -191,9 +191,11 @@ hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a --format=hex"))     
 --
 -- One bind, not the press/release pair this used to be: with a toggle the key
 -- is not what holds the mic open, so there is nothing to bind on release.
--- Because the keyboard no longer tells you the mic is live, the daemon puts up
--- a notification that stays on screen for the whole recording, and caps a
--- forgotten session so it cannot record for hours.
+-- Because the keyboard no longer tells you the mic is live, the shell shows
+-- the pill's phases, and the language tag rides the same pill. There used to
+-- be a cap here that stopped a forgotten session on its own; it kept cutting
+-- real rants off mid-sentence, so the length of a dictation is now the
+-- owner's decision, not the daemon's.
 --
 -- This key used to launch `xhisper`, which has not existed on this box for a
 -- while, so the bind and its submap were both dead. Same key, working tool.
@@ -201,13 +203,19 @@ hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a --format=hex"))     
 -- step with the recording, which is what makes the language keys work.
 hl.bind("SUPER + R", hl.dsp.exec_cmd("voice key")) -- Dictate: tap on, tap off
 
+-- The same dictation, STREAMING: the text is transcribed and typed at pauses
+-- while you are still talking, instead of one batch when you stop. Either
+-- stop key ends either kind of session, so there is no mode to keep track of.
+hl.bind("SUPER + ALT + R", hl.dsp.exec_cmd("voice key stream")) -- Dictate: streaming
+
 -- Language keys, live ONLY while a recording is running. `voice key` enters
 -- this submap when dictation starts and leaves it when it stops, so J/E/D/A
 -- are swallowed letters the rest of the time. The pins are sticky, not
 -- per-clip: they stay until changed again, and A hands back to auto-detect.
 -- ESC leaves the submap without stopping the recording.
 hl.define_submap("voice", function()
-    hl.bind("SUPER + R", hl.dsp.exec_cmd("voice key"))     -- stop dictating, leave
+    hl.bind("SUPER + R",       hl.dsp.exec_cmd("voice key"))        -- stop dictating, leave
+    hl.bind("SUPER + ALT + R", hl.dsp.exec_cmd("voice key stream")) -- stop streaming, leave
     hl.bind("J",         hl.dsp.exec_cmd("voice lang ja"))    -- Japanese
     hl.bind("E",         hl.dsp.exec_cmd("voice lang en-dk")) -- English, DK accent
     hl.bind("D",         hl.dsp.exec_cmd("voice lang da"))    -- Danish
