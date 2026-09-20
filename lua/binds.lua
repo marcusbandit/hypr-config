@@ -197,7 +197,23 @@ hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a --format=hex"))     
 --
 -- This key used to launch `xhisper`, which has not existed on this box for a
 -- while, so the bind and its submap were both dead. Same key, working tool.
-hl.bind("SUPER + R", hl.dsp.exec_cmd("voice toggle")) -- Dictate: tap on, tap off
+-- `voice key` rather than bare toggle: it keeps the voice submap below in
+-- step with the recording, which is what makes the language keys work.
+hl.bind("SUPER + R", hl.dsp.exec_cmd("voice key")) -- Dictate: tap on, tap off
+
+-- Language keys, live ONLY while a recording is running. `voice key` enters
+-- this submap when dictation starts and leaves it when it stops, so J/E/D/A
+-- are swallowed letters the rest of the time. The pins are sticky, not
+-- per-clip: they stay until changed again, and A hands back to auto-detect.
+-- ESC leaves the submap without stopping the recording.
+hl.define_submap("voice", function()
+    hl.bind("SUPER + R", hl.dsp.exec_cmd("voice key"))     -- stop dictating, leave
+    hl.bind("J",         hl.dsp.exec_cmd("voice lang ja"))    -- Japanese
+    hl.bind("E",         hl.dsp.exec_cmd("voice lang en-dk")) -- English, DK accent
+    hl.bind("D",         hl.dsp.exec_cmd("voice lang da"))    -- Danish
+    hl.bind("A",         hl.dsp.exec_cmd("voice lang auto"))  -- auto-detect
+    hl.bind("ESCAPE",    hl.dsp.submap("reset"))
+end)
 
 -- Retype the last transcription, wherever focus is now. No mic, no Whisper: it
 -- replays the text the daemon already has, so it is instant and identical every
