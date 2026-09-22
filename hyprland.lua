@@ -42,6 +42,9 @@ require("lua.monitors")
 -- Window and layer rules.
 require("lua.rules")
 
+-- Column cap for the scrolling layout: overflow folds into the last column.
+require("lua.columncap")
+
 -- Keybinds and submaps.
 require("lua.binds")
 
