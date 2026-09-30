@@ -1,26 +1,16 @@
---------------------------------------------------------------------------------
--- INPUT SETTINGS
---
--- Ported from the `input {}`, `gestures {}` and `cursor {}` blocks of
--- hyprland/general.conf. Everything else in that file (general, decoration,
--- animations, scrolling, master, misc) is ported elsewhere.
---
--- hyprlang's nested blocks map straight onto nested tables in `hl.config`, so
--- `input:touchpad:natural_scroll` is just `input.touchpad.natural_scroll` here.
---------------------------------------------------------------------------------
+-- Input settings, ported from the input/gestures/cursor blocks of
+-- hyprland/general.conf. hyprlang's nested blocks map straight onto nested
+-- tables in hl.config.
 
 local host = require("lua.host")
 
 hl.config({
     input = {
-        -- Two layouts, US primary and Danish secondary; `grp:switch` below is
-        -- what flips between them.
         kb_layout  = "us,dk",
         kb_variant = "",
         kb_model   = "",
-        -- One string, not a list: XKB itself takes a comma-separated option
-        -- string, so the comma is part of the value. Caps Lock becomes
-        -- Backspace, and the layout group switches on the configured key.
+        -- One string, not a list: the comma is part of the XKB value.
+        -- Caps Lock becomes Backspace; grp:switch flips layouts.
         kb_options = "caps:backspace, grp:switch",
         kb_rules   = "",
 
@@ -42,31 +32,10 @@ hl.config({
     },
 })
 
---------------------------------------------------------------------------------
--- Gestures
---
--- general.conf declared an empty `gestures {}` block, so there is nothing to
--- port: no gesture was ever configured. Left as this note rather than an
--- invented `hl.gesture` call, so the absence stays deliberate and visible.
---------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
--- TABLET MAPPING
---
--- A tablet is an ABSOLUTE device: its surface maps corner-to-corner onto
--- whatever it is pointed at. Pointed at the whole ultrawide that means a
--- 224x148mm surface stretched across 5120x1440, so a circle drawn on the tablet
--- comes out 2.35x too wide on screen and the pen crosses a metre of glass for a
--- centimetre of movement. Mapping it to a slice of the panel that carries the
--- tablet's OWN aspect fixes both.
---
--- The width is computed rather than written down: hardcoding 2179 means the
--- mapping silently goes wrong the day the panel or the tablet changes.
---
--- On Wayland there is no xsetwacom and OpenTabletDriver does not do Bluetooth,
--- so the compositor is the only thing that can do this.
---------------------------------------------------------------------------------
-
+-- Tablet mapping. A tablet is absolute: on the whole ultrawide a circle draws
+-- 2.35x too wide, so map it to a slice of the panel carrying the tablet's own
+-- aspect. Width is computed, not hardcoded, so a panel or tablet change cannot
+-- silently break it.
 if host.is("banditbox") then
     local surface = { w = 224, h = 148 }   -- Intuos Pro M active area, mm
     local panel   = { w = 5120, h = 1440 } -- HDMI-A-1
@@ -76,9 +45,7 @@ if host.is("banditbox") then
     hl.device({
         name            = "wacom-intuos-pro-m-pen",
         output          = "HDMI-A-1",
-        -- Centred horizontally, full panel height. Relative to the output's
-        -- own top-left, not the global layout origin.
-        region_position = string.format("%d 0", math.floor((panel.w - region_w) / 2)),
+        region_position = string.format("%d 0", math.floor((panel.w - region_w) / 2)), -- centred
         region_size     = string.format("%d %d", region_w, panel.h),
     })
 end

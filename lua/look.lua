@@ -1,24 +1,10 @@
---------------------------------------------------------------------------------
--- LOOK AND FEEL
---
--- Ported from hyprland/general.conf: the general / decoration / animations /
--- scrolling / master / misc blocks. The input, gestures and cursor blocks that
--- shared that file are not here; they live with the rest of the input config.
---
--- No hex lives in this file. Every colour comes from lua/theme.lua, so a stop
--- is still defined exactly once.
---------------------------------------------------------------------------------
+-- Look and feel, ported from hyprland/general.conf (general/decoration/
+-- animations/scrolling/master/misc). No hex here; colours come from lua/theme.lua.
 
 local theme = require("lua.theme")
 
---------------------------------------------------------------------------------
--- Geometry
---------------------------------------------------------------------------------
-
---- Base gutter. gaps_in is applied to each side of each window, so the seam
---- between two tiled windows is 2 * gap, and the screen edge is gaps_out. Both
---- are derived from this one number so the seam and the edge stay the same
---- visual width; change `gap` and the whole frame rescales.
+-- gaps_in applies per window side, so the tiled seam is 2 * gap and the screen
+-- edge is gaps_out; both derive from one number.
 local gap = 5
 
 hl.config({
@@ -29,9 +15,6 @@ hl.config({
         border_size = 2,
 
         col = {
-            -- Greensteel: five stops so the bright one reads as a specular
-            -- highlight sliding along a metal edge, not as a two-colour fade.
-            -- Palette lives in lua/theme.lua.
             active_border   = theme.border_active,
             inactive_border = theme.border_inactive,
         },
@@ -43,19 +26,13 @@ hl.config({
     },
 
     decoration = {
-        -- G2 / squircle corners: rounding_power is the superellipse exponent
-        -- (|x|^p + |y|^p = r^p). p=2 is a plain circular arc (G1, curvature
-        -- jumps 0 -> 1/r at the join). p>2 makes curvature go to 0 at the edge,
-        -- so the corner is G2-continuous. Radius is bumped to keep the apparent
-        -- corner size, since a superellipse bites less off the diagonal at the
-        -- same r.
+        -- G2 squircle corners: rounding_power 4.0 makes curvature go to 0 at
+        -- the edge; radius is bumped since a superellipse bites less off the
+        -- diagonal at the same r.
         --
-        -- THIS IS NOT THE WINDOW RADIUS. It is the Android Emulator's bezel,
-        -- and lua/rules.lua pulls every other window down to theme.rounding
-        -- .window with the "global-rounding" rule. The inversion is forced by
-        -- Hyprland capping the per-window rounding rule at 20; the full
-        -- explanation lives next to the numbers in lua/theme.lua. Read it
-        -- before changing this line.
+        -- NOT the window radius: this is the emulator bezel, and the
+        -- global-rounding rule in lua/rules.lua demotes everything else.
+        -- Reasoning next to the numbers in lua/theme.lua.
         rounding       = theme.rounding.bezel,
         rounding_power = 4.0,
 
@@ -82,13 +59,18 @@ hl.config({
     },
 
     animations = {
-        -- hyprlang spelled this `enabled = yes, please :)`, which is a joke
-        -- value that parses as true. Lua wants the boolean.
-        enabled = true,
+        enabled = true, -- hyprlang's joke value "yes, please :)" parsed as true
     },
 
     scrolling = {
         focus_fit_method = 1,
+    },
+
+    -- Default (1) resizes the whole split chain, reflowing sibling windows --
+    -- upstream calls that intended (issues #12553/#12367/#12380, closed
+    -- not-planned). 0 is the pre-0.52 semantic: only the grabbed split moves.
+    dwindle = {
+        smart_resizing = 0,
     },
 
     master = {
@@ -101,10 +83,6 @@ hl.config({
     },
 })
 
---------------------------------------------------------------------------------
--- Curves
---------------------------------------------------------------------------------
-
 hl.curve("easeOutQuint",   { type = "bezier", points = { {0.23, 1},    {0.32, 1}   } })
 hl.curve("easeInOutCubic", { type = "bezier", points = { {0.65, 0.05}, {0.36, 1}   } })
 hl.curve("linear",         { type = "bezier", points = { {0, 0},       {1, 1}      } })
@@ -112,27 +90,14 @@ hl.curve("almostLinear",   { type = "bezier", points = { {0.5, 0.5},   {0.75, 1.
 hl.curve("quick",          { type = "bezier", points = { {0.15, 0},    {0.1, 1}    } })
 hl.curve("easeOutExpo",    { type = "bezier", points = { {0.19, 1},    {0.22, 1}   } })
 
---------------------------------------------------------------------------------
--- Animations
---------------------------------------------------------------------------------
-
 hl.animation({ leaf = "global", enabled = true, speed = 10,   bezier = "default" })
 hl.animation({ leaf = "border", enabled = true, speed = 5.39, bezier = "easeOutQuint" })
 
--- Rotates the active gradient so the specular stop travels around the window:
--- metal catching a moving light. The number is the period in deciseconds, so
--- higher is slower: 500 = one rotation per 50s, a drift you notice only if you
--- look. Set `enabled = false` for the static highlight instead.
---
--- PORTING LOSS: this cannot be expressed faithfully in Lua. The old line was
--- `animation = borderangle, 1, 500, linear, loop`, and hyprlang honoured the
--- 500 (the live session is running 500 right now). The Lua binding hard-caps
--- speed at 100 (LuaBindingsConfigRules.cpp:416, CLuaConfigFloat(0, 0, 100)),
--- and anything above the cap is a hard config error, not a clamp. So the
--- highlight now completes a rotation every 10s instead of every 50s: it drifts
--- 5x faster than intended. This is a limitation of the Lua binding, not a
--- mistake in the config. If the faster drift is distracting, `enabled = false`
--- gives the static highlight described above rather than a wrong speed.
+-- Rotates the gradient so the highlight travels the border; speed is
+-- deciseconds per rotation. PORTING LOSS: the binding hard-caps speed at 100
+-- (CLuaConfigFloat(0, 0, 100) in LuaBindingsConfigRules.cpp), anything above
+-- is a hard config error, so 500 (50s per rotation) runs as 100 (10s). Set
+-- enabled = false for the static highlight.
 local BORDERANGLE_PERIOD  = 500 -- deciseconds per rotation, the intended value
 local BORDERANGLE_LUA_MAX = 100 -- hard cap in the Lua binding
 hl.animation({
