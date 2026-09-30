@@ -226,11 +226,12 @@ hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("banditshell picker freezeclip")) -
 
 hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a --format=hex")) -- Color Picker
 
--- Region cam: pin a screen region as the capture. regionpick crops the monitor
--- capture in OBS to a rectangle, so the capture follows the POSITION, not the
--- window: whatever sits at that spot later is what streams.
-hl.bind("SUPER + ALT + C",          hl.dsp.exec_cmd("regionpick"),      { description = "Region cam: capture a clicked window's region" })
-hl.bind("SUPER + ALT + SHIFT + C",  hl.dsp.exec_cmd("regionpick drag"), { description = "Region cam: capture a dragged rectangle" })
+-- Region cam: pin a screen region as the capture. regionpick pops the overlay
+-- picker (click a window or drag a rectangle) and crops the monitor capture in
+-- OBS to that rectangle, so the capture follows the POSITION, not the window:
+-- whatever sits at that spot later is what streams.
+hl.bind("SUPER + ALT + C",         hl.dsp.exec_cmd("regionpick"),       { description = "Region cam: pick a region" })
+hl.bind("SUPER + ALT + SHIFT + C", hl.dsp.exec_cmd("regionpick clear"), { description = "Region cam: reset to the full monitor" })
 
 -- Dictation: tap to start, tap again to stop and type. No length cap; the
 -- shell's pill shows the phases and the language. `voice key` keeps the voice
