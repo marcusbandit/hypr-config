@@ -33,6 +33,13 @@ hl.on("hyprland.start", function()
     -- Auth agent (start early so any app that needs auth doesn't block)
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
 
+    -- Portal (start it explicitly after the DBus env import above: the portal
+    -- manager can be dbus-activated before that import lands, and its
+    -- ConditionEnvironment=WAYLAND_DISPLAY is only checked at start time, so the
+    -- Hyprland portal gets skipped and screen capture in OBS comes up black.
+    -- `systemctl --user start` is a no-op if the unit is already active.)
+    hl.exec_cmd("systemctl --user start xdg-desktop-portal-hyprland")
+
     -- Set initial workspace before the shell renders the bar (avoids wrong workspace indicator flash)
     hl.exec_cmd("hyprctl dispatch workspace 1")
 
