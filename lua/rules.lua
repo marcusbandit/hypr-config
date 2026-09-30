@@ -74,6 +74,15 @@ hl.window_rule({
     center = true,
 })
 
+-- regionpick: its own program, a picker window for OBS capture. Match on the
+-- title: the toolkit's class is generic (org.quickshell).
+hl.window_rule({
+    name   = "regionpick",
+    match  = { title = "^(regionpick)$" },
+    float  = true,
+    center = true,
+})
+
 -- Android Emulator (Jet Lag dev) - floating, centred, phone bezel.
 -- Fixed number, NOT derived from the window rounding: a bezel is the phone's
 -- property. No rounding rule on the body on purpose (falls through to the
