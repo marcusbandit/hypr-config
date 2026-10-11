@@ -1,8 +1,4 @@
--- Host detection: one config, two machines (banditbox desktop, kangaeru
--- laptop), kept byte-identical and branching at runtime. Every module that
--- needs the hostname requires THIS file rather than sniffing for itself, so
--- the lookup happens once and a third machine has one place to go.
-
+-- Host detection: one config, two machines, branching at runtime.
 local M = {}
 
 local function read_first_line(path)
@@ -26,9 +22,6 @@ local function clean(value)
     return trimmed
 end
 
--- /etc/hostname is the authority; $HOSTNAME is a shell variable and usually
--- not exported, so it is a backstop. "unknown" matches no host table, so an
--- unknown box gets the generic (preferred/auto, no GPU env) treatment.
 M.name = clean(read_first_line("/etc/hostname"))
     or clean(os.getenv("HOSTNAME"))
     or "unknown"

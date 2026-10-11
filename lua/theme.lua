@@ -1,12 +1,4 @@
--- Palette. NOT defined here: ~/.config/theme/current/hypr-colors.lua is
--- generated from the theme system (edit the theme's colors.toml, never the
--- generated file) and loaded below, with greensteel as the fallback for a
--- fresh machine. The ramp is a luminance ramp with a specular spike, one hue
--- family climbing from near-black to white; a theme swaps the hue but must
--- not flatten the ramp or the gradients stop reading as lit metal.
--- Monocraft (pixel font) needs the bright accent or silver on abyss/void;
--- mid-tones make mush on 1px stems.
-
+-- Palette: generated from the theme system, greensteel as fallback.
 local M = {}
 
 local GENERATED = "/.config/theme/current/hypr-colors.lua"
@@ -17,7 +9,6 @@ local REQUIRED = {
     "lush", "mint", "mint_dim", "shadow", "verdigris", "white",
 }
 
--- FALLBACK ONLY (greensteel). Cool anodised green, one hue family around 158deg.
 local fallback_hex = {
     void    = "070C0A",
     abyss   = "0D1512",
@@ -45,8 +36,7 @@ local fallback_hex = {
     shadow     = "040907",
 }
 
--- loadfile + pcall rather than dofile: dofile raises and would abort the whole
--- config load, leaving a broken session instead of a mis-coloured one.
+-- loadfile + pcall: a broken generated file must cost a colour, not a session.
 local function load_generated()
     local home = os.getenv("HOME")
     if not home then return nil end
@@ -81,10 +71,6 @@ function M.rgba(name, a)
     return "rgba(" .. hex .. alpha_hex(a) .. ")"
 end
 
---------------------------------------------------------------------------------
--- Derived gradients
---------------------------------------------------------------------------------
-
 M.border_active = {
     colors = {
         M.rgba("dark", "ff"),
@@ -94,28 +80,15 @@ M.border_active = {
 }
 
 M.border_inactive = "rgba(00000000)"
-
 M.shadow = M.rgba("shadow", "ee")
 
---------------------------------------------------------------------------------
--- Corner radii
---------------------------------------------------------------------------------
-
--- READ BEFORE TOUCHING decoration.rounding (set in lua/look.lua). The global
--- is `bezel`, not `window`, and lua/rules.lua pulls everything but the
--- emulator's phone body back down to `window`. Inverted on purpose: Hyprland
--- 0.56.2 caps the per-window rounding RULE at 20
---   {"rounding", ... new CLuaConfigInt(0, 0, 20) ...}
---   (LuaBindingsInternal.hpp)
--- while the global is uncapped, so a radius above 20 is reachable only as the
--- global. Re-check with:
---   grep -n '"rounding"' /usr/include/hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp
+-- decoration.rounding is the emulator bezel; per-window rules cap at 20, the
+-- global does not, so `window` is applied per-rule and `bezel` globally.
 M.rounding = {
-    window = 15, -- every ordinary window
-    bezel  = 30, -- the emulator's phone body; independent of `window`
+    window = 15,
+    bezel  = 30,
 }
 
--- Different metals: mint floating, brass pinned.
 M.floating = { active = M.rgb("mint"), inactive = "rgba(00000000)" }
 M.pinned   = { active = M.rgb("brass"), inactive = "rgba(00000000)" }
 

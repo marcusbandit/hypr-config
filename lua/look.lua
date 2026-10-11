@@ -1,10 +1,5 @@
--- Look and feel, ported from hyprland/general.conf (general/decoration/
--- animations/scrolling/master/misc). No hex here; colours come from lua/theme.lua.
-
 local theme = require("lua.theme")
 
--- gaps_in applies per window side, so the tiled seam is 2 * gap and the screen
--- edge is gaps_out; both derive from one number.
 local gap = 5
 
 hl.config({
@@ -26,13 +21,6 @@ hl.config({
     },
 
     decoration = {
-        -- G2 squircle corners: rounding_power 4.0 makes curvature go to 0 at
-        -- the edge; radius is bumped since a superellipse bites less off the
-        -- diagonal at the same r.
-        --
-        -- NOT the window radius: this is the emulator bezel, and the
-        -- global-rounding rule in lua/rules.lua demotes everything else.
-        -- Reasoning next to the numbers in lua/theme.lua.
         rounding       = theme.rounding.bezel,
         rounding_power = 4.0,
 
@@ -59,16 +47,13 @@ hl.config({
     },
 
     animations = {
-        enabled = true, -- hyprlang's joke value "yes, please :)" parsed as true
+        enabled = true,
     },
 
     scrolling = {
         focus_fit_method = 1,
     },
 
-    -- Default (1) resizes the whole split chain, reflowing sibling windows --
-    -- upstream calls that intended (issues #12553/#12367/#12380, closed
-    -- not-planned). 0 is the pre-0.52 semantic: only the grabbed split moves.
     dwindle = {
         smart_resizing = 0,
     },
@@ -93,20 +78,9 @@ hl.curve("easeOutExpo",    { type = "bezier", points = { {0.19, 1},    {0.22, 1}
 hl.animation({ leaf = "global", enabled = true, speed = 10,   bezier = "default" })
 hl.animation({ leaf = "border", enabled = true, speed = 5.39, bezier = "easeOutQuint" })
 
--- Rotates the gradient so the highlight travels the border; speed is
--- deciseconds per rotation. PORTING LOSS: the binding hard-caps speed at 100
--- (CLuaConfigFloat(0, 0, 100) in LuaBindingsConfigRules.cpp), anything above
--- is a hard config error, so 500 (50s per rotation) runs as 100 (10s). Set
--- enabled = false for the static highlight.
-local BORDERANGLE_PERIOD  = 500 -- deciseconds per rotation, the intended value
-local BORDERANGLE_LUA_MAX = 100 -- hard cap in the Lua binding
-hl.animation({
-    leaf    = "borderangle",
-    enabled = true,
-    speed   = math.min(BORDERANGLE_PERIOD, BORDERANGLE_LUA_MAX),
-    bezier  = "linear",
-    style   = "loop",
-})
+-- The Lua binding hard-caps borderangle speed at 100 (deciseconds); the
+-- intended 50s period runs as 10s.
+hl.animation({ leaf = "borderangle", enabled = true, speed = 100, bezier = "linear", style = "loop" })
 
 hl.animation({ leaf = "windows",       enabled = true, speed = 4.79, bezier = "easeOutExpo",  style = "slide" })
 hl.animation({ leaf = "windowsOut",    enabled = true, speed = 1.49, bezier = "linear",       style = "popin 87%" })
