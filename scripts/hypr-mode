@@ -36,8 +36,10 @@ usage() {
     exit "${1:-0}"
 }
 
+# true, false, or null when unset. Not `// empty`: jq's alternative operator
+# drops false, and an off flag read as unknown is how leaving bare once hung.
 shell_bare() {
-    jq -r '.edge.bare // empty' "$shell_cfg" 2>/dev/null || true
+    jq -r '.edge.bare' "$shell_cfg" 2>/dev/null || true
 }
 
 streaming() {
