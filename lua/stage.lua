@@ -6,7 +6,13 @@
 -- (client state, kept off the whole monitor by sync_fullscreen = false in
 -- lua/rules.lua) takes the stage, and the stage window takes its slot. When
 -- it leaves fullscreen, both go back. With several in fullscreen, the newest
--- holds the stage, as with real fullscreen.
+-- holds the stage, as with real fullscreen. The app sizes itself to the stage:
+-- a fullscreen video, page, image or editor fills 2560x1440 edge to edge.
+--
+-- Except Wine (Proton games, Windows apps): it checks its window against the
+-- monitor, sees 2560 of 5120 and fights it. lua/rules.lua ignores its
+-- fullscreen requests, and scripts/stage-run gives games a stage-sized
+-- display instead.
 --
 -- The lock: Hyprland hands a Lua layout no resize deltas, a drag on a tiled
 -- window only re-runs recalculate, so nothing can pull the stage out of 16:9.
@@ -21,6 +27,14 @@ M.name = "lua:stage"
 
 local RATIO = 16 / 9
 local FULLSCREEN = 2 -- Hyprland's fullscreen mode value; 1 is maximized
+
+-- Wine windows by class, for lua/rules.lua, and the same test here.
+M.wine_class = "^(steam_app_[0-9]+|steam_proton|.*\\.exe)$"
+
+local function wine(w)
+    local class = w.class or ""
+    return class:match("^steam_app_%d+$") or class == "steam_proton" or class:match("%.exe$")
+end
 
 -- Side window height weights by window address, 1 when unset. Reset by a
 -- reload; a column then splits evenly again.
@@ -129,8 +143,7 @@ local function fullscreen_pick(ws, targets)
     local now, pick = {}, nil
     for i, t in ipairs(targets) do
         local w = t.window
-        -- X11 windows never get the stage this way; see lua/rules.lua.
-        if w and not w.xwayland and w.fullscreen_client == FULLSCREEN then
+        if w and not wine(w) and w.fullscreen_client == FULLSCREEN then
             now[w.address] = i
             if not (fs_last[ws] or {})[w.address] then
                 pick = i
@@ -229,12 +242,11 @@ function M.put_on_stage()
 end
 
 -- Focus view: the app goes fullscreen inside the stage (client state only),
--- which puts it on stage at 16:9. An X11 window is only put on stage: told it
--- is fullscreen in a tile, Wine fights it (lua/rules.lua). Off the stage
+-- which puts it on stage at 16:9. Wine is only put on stage. Off the stage
 -- layout it is the ordinary whole-monitor fullscreen.
 function M.focus_view()
     local w = M.window()
-    if w and w.xwayland then
+    if w and wine(w) then
         M.put_on_stage()
     elseif w then
         hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = FULLSCREEN, action = "toggle" }))

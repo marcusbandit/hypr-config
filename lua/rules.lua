@@ -1,6 +1,7 @@
 local theme = require("lua.theme")
 local mode = require("lua.mode")
 local stage = require("lua.monitors").stage
+local stage_layout = require("lua.stage")
 
 local popup_width  = 880
 local popup_height = 652
@@ -141,14 +142,12 @@ if mode.streamer and stage then
         sync_fullscreen = false,
     })
 
-    -- Not for X11 (Proton games): told it is fullscreen in a 16:9 tile, Wine
-    -- sees a window smaller than the monitor and drops and re-asks fullscreen
-    -- several times a second. Their requests are ignored instead. A game that
-    -- wants a real fullscreen gets one from scripts/stage-run: gamescope, a
-    -- display the stage's size. Applied when a window opens.
+    -- Not for Wine (lua/stage.lua): its fullscreen requests are ignored, and
+    -- a game that wants a real fullscreen gets one from scripts/stage-run.
+    -- Applied when a window opens.
     hl.window_rule({
-        name           = "streamer-x11-no-fullscreen",
-        match          = { xwayland = true },
+        name           = "streamer-wine-no-fullscreen",
+        match          = { class = stage_layout.wine_class },
         suppress_event = "fullscreen",
     })
 
