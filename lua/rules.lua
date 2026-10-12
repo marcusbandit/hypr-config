@@ -1,7 +1,6 @@
 local theme = require("lua.theme")
 local mode = require("lua.mode")
 local stage = require("lua.monitors").stage
-local stage_layout = require("lua.stage")
 
 local popup_width  = 880
 local popup_height = 652
@@ -132,32 +131,12 @@ if mode.streamer then
     })
 end
 
--- Streamer mode, on the stage's workspaces (lua/stage.lua): an app asking for
--- fullscreen only believes it got it, so it stays tiled and the stage layout
--- gives it the 16:9 stage instead of the whole ultrawide.
 if mode.streamer and stage then
-    hl.window_rule({
-        name            = "streamer-stage-fullscreen",
-        match           = { workspace = "m[" .. stage .. "]s[0]" },
-        sync_fullscreen = false,
-    })
-
-    -- Not for Wine (lua/stage.lua): its fullscreen requests are ignored, and
-    -- a game that wants a real fullscreen gets one from scripts/stage-run.
-    -- Applied when a window opens.
-    hl.window_rule({
-        name           = "streamer-wine-no-fullscreen",
-        match          = { class = stage_layout.wine_class },
-        suppress_event = "fullscreen",
-    })
-
-    -- Games open on workspace 3. They hold off the idle lock themselves:
-    -- Hyprland's fullscreen inhibit only counts whole-monitor fullscreen.
-    -- gamescope is a game run through scripts/stage-run.
+    -- Games open on workspace 3 and hold off the idle lock even windowed on
+    -- the stage, which Hyprland's fullscreen inhibit does not cover.
     local games = {
         { content = "game" },
         { class = "^steam_app_.*$" },
-        { class = "^gamescope$" },
         { class = "^Minecraft.*" },
         { class = "^sober$" },
     }
