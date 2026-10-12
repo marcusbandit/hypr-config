@@ -93,7 +93,7 @@ hl.bind("SUPER + E", hl.dsp.exec_cmd("banditshell toggle panel files"))
 hl.bind("SUPER + Z", hl.dsp.exec_cmd("banditshell toggle panel calculator"))
 hl.bind("XF86Calculator", hl.dsp.exec_cmd("banditshell toggle panel calculator"), { locked = true })
 hl.bind("SUPER + M", hl.dsp.exec_cmd("banditshell toggle panel media"))
-hl.bind("SUPER + K", hl.dsp.exec_cmd("banditshell sidebar toggle"))
+hl.bind("SUPER + K", hl.dsp.exec_cmd("banditshell toggle sidebar"))
 hl.bind("SUPER + V", hl.dsp.exec_cmd("banditshell toggle panel clipboard"))
 
 -- Bare mode: chrome flag and compositor gaps follow one source of truth.
