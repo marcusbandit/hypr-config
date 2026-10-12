@@ -6,14 +6,16 @@
 #
 #   bare      banditshell's chrome off (its edge.bare flag), and the
 #             compositor square: no gaps, no rounding.
-#   streamer  bare, plus the stage (lua/stage.lua): a centred 16:9 box on
-#             the stage output that no drag can resize, new windows beside
-#             it never on it, the other bands stacked downward, OBS on
-#             workspace 7. If OBS is running, its capture is cropped to the
-#             stage. Leaving puts bare back to where it was before.
+#   streamer  bare, no borders, and the stage (lua/stage.lua): a centred
+#             16:9 box on the stage output that no drag can resize, new
+#             windows beside it never on it, the other bands stacked
+#             downward, OBS on workspace 7. If OBS is running, its capture
+#             is cropped to the stage. Leaving puts bare back to where it
+#             was before. Games get the stage as a screen via stage-run.
 #
 # Usage: hypr-mode bare|streamer [on|off|toggle]   default: toggle
 #        hypr-mode aim      crop OBS's capture to the stage (via regionpick)
+#        hypr-mode stage    print the stage rect: X Y W H
 #        hypr-mode status
 #
 # Bound to SUPER+SHIFT+K (bare) and SUPER+CTRL+K (streamer) in lua/binds.lua.
@@ -32,7 +34,7 @@ die() {
 }
 
 usage() {
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -115,23 +117,28 @@ streamer() {
     esac
 }
 
-# The stage rect is lua/stage.lua's: 16:9 at the stage output's full height,
-# centred. The crop goes border_size inside it, onto the window itself, so
-# the focus border never shows on stream; OBS scales the few pixels away.
-# HYPR_STAGE comes from lua/monitors.lua.
-aim() {
-    command -v regionpick >/dev/null || die "regionpick not found"
+# The stage rect, "X Y W H": lua/stage.lua's 16:9 at the stage output's full
+# height, centred. HYPR_STAGE comes from lua/monitors.lua.
+stage() {
     [[ -n "${HYPR_STAGE:-}" ]] || die "no stage output on this host (lua/monitors.lua)"
-    streaming || die "not in streamer mode, there is no stage"
-    local border rect
-    border=$(hyprctl -j getoption general:border_size | jq -r '.int')
-    rect=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" --argjson b "$border" '
+    local rect
+    rect=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" '
         (map(select(.name == $n))[0] // empty) |
         ((if .transform % 2 == 1 then .height else .width end) / .scale | floor) as $mw |
         ((if .transform % 2 == 1 then .width else .height end) / .scale | floor) as $mh |
         ([$mh * 16 / 9 | floor, $mw] | min) as $sw |
-        [.x + (($mw - $sw) / 2 | floor) + $b, .y + $b, $sw - 2 * $b, $mh - 2 * $b] | @tsv')
+        [.x + (($mw - $sw) / 2 | floor), .y, $sw, $mh] | @tsv')
     [[ -n "$rect" ]] || die "stage output $HYPR_STAGE is not connected"
+    printf '%s\n' "$rect"
+}
+
+# Streamer mode draws no borders (lua/look.lua), so the crop is the stage
+# itself, edge to edge.
+aim() {
+    command -v regionpick >/dev/null || die "regionpick not found"
+    streaming || die "not in streamer mode, there is no stage"
+    local rect
+    rect=$(stage) || exit 1
     # shellcheck disable=SC2086
     regionpick set $rect
 }
@@ -148,6 +155,7 @@ case "${1:-}" in
     bare) bare "${2:-toggle}" ;;
     streamer) streamer "${2:-toggle}" ;;
     aim) aim ;;
+    stage) stage ;;
     status) status ;;
     -h | --help) usage ;;
     *) usage 2 ;;

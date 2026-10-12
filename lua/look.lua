@@ -9,7 +9,9 @@ hl.config({
         gaps_in  = gap,
         gaps_out = gap * 2,
 
-        border_size = 2,
+        -- None while streaming: focus follows the mouse, and a focus ring
+        -- on stream is noise.
+        border_size = mode.streamer and 0 or 2,
 
         col = {
             active_border   = theme.border_active,

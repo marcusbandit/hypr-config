@@ -143,8 +143,9 @@ if mode.streamer and stage then
 
     -- Not for X11 (Proton games): told it is fullscreen in a 16:9 tile, Wine
     -- sees a window smaller than the monitor and drops and re-asks fullscreen
-    -- several times a second. Their requests are ignored instead; set games
-    -- to windowed or borderless. Applied when a window opens.
+    -- several times a second. Their requests are ignored instead. A game that
+    -- wants a real fullscreen gets one from scripts/stage-run: gamescope, a
+    -- display the stage's size. Applied when a window opens.
     hl.window_rule({
         name           = "streamer-x11-no-fullscreen",
         match          = { xwayland = true },
@@ -153,16 +154,18 @@ if mode.streamer and stage then
 
     -- Games open on workspace 3. They hold off the idle lock themselves:
     -- Hyprland's fullscreen inhibit only counts whole-monitor fullscreen.
+    -- gamescope is a game run through scripts/stage-run.
     local games = {
         { content = "game" },
         { class = "^steam_app_.*$" },
+        { class = "^gamescope$" },
         { class = "^Minecraft.*" },
         { class = "^sober$" },
     }
     for i, match in ipairs(games) do
         hl.window_rule({
-            name             = "streamer-game-" .. i,
-            match            = match,
+            name         = "streamer-game-" .. i,
+            match        = match,
             workspace    = "3",
             idle_inhibit = "always",
         })
