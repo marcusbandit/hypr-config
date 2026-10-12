@@ -3,10 +3,10 @@
 local host = require("lua.host")
 
 hl.on("hyprland.start", function()
-    -- One shell, chained: exec_cmd does not wait, and the portal must start
-    -- after the dbus import or OBS capture goes black.
+    -- One shell, chained: exec_cmd does not wait, and both units need
+    -- WAYLAND_DISPLAY imported first (a black OBS capture, a dead idle lock).
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-        .. " && systemctl --user start xdg-desktop-portal-hyprland")
+        .. " && systemctl --user start xdg-desktop-portal-hyprland hypridle")
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
 
     hl.dispatch(hl.dsp.focus({ workspace = 1 }))

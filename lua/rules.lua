@@ -10,6 +10,13 @@ hl.window_rule({
     suppress_event = "maximize",
 })
 
+-- Fullscreen video or a game holds off the idle lock (hypridle.conf).
+hl.window_rule({
+    name         = "global-idle-inhibit-fullscreen",
+    match        = { class = ".*" },
+    idle_inhibit = "fullscreen",
+})
+
 -- The emulator's phone body keeps the bezel radius; everything else is
 -- demoted (per-window rounding rules cap at 20, the global does not).
 hl.window_rule({
