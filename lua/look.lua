@@ -48,8 +48,9 @@ hl.config({
         },
     },
 
+    -- Off while streaming: a window sliding into place is dead air on stream.
     animations = {
-        enabled = true,
+        enabled = not mode.streamer,
     },
 
     scrolling = {
