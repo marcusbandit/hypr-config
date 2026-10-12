@@ -2,6 +2,12 @@
 -- window is a 16:9 box at full height, centred; the rest alternate into the
 -- columns beside it (right, then left), stacked top to bottom.
 --
+-- Fullscreen means the stage: a window whose app believes it is fullscreen
+-- (client state, kept off the whole monitor by sync_fullscreen = false in
+-- lua/rules.lua) takes the stage, and the stage window takes its slot. When
+-- it leaves fullscreen, both go back. With several in fullscreen, the newest
+-- holds the stage, as with real fullscreen.
+--
 -- The lock: Hyprland hands a Lua layout no resize deltas, a drag on a tiled
 -- window only re-runs recalculate, so nothing can pull the stage out of 16:9.
 -- Side windows get their height on keys instead (layout messages "taller"
@@ -12,6 +18,7 @@ local M = {}
 M.name = "lua:stage"
 
 local RATIO = 16 / 9
+local FULLSCREEN = 2 -- Hyprland's fullscreen mode value; 1 is maximized
 
 -- Side window height weights by window address, 1 when unset. Reset by a
 -- reload; a column then splits evenly again.
@@ -40,9 +47,47 @@ local function stack(column, x, y, w, h)
     end
 end
 
+-- Per workspace id: windows in client fullscreen at the last pass, and the
+-- one holding the stage. A window new to fullscreen takes the stage;
+-- otherwise the holder keeps it.
+local fs_last, fs_holder = {}, {}
+
+local function fullscreen_pick(ws, targets)
+    local now, pick = {}, nil
+    for i, t in ipairs(targets) do
+        local w = t.window
+        if w and w.fullscreen_client == FULLSCREEN then
+            now[w.address] = i
+            if not (fs_last[ws] or {})[w.address] then
+                pick = i
+            end
+        end
+    end
+    pick = pick or now[fs_holder[ws] or ""]
+    if not pick then
+        for _, i in pairs(now) do
+            pick = math.min(pick or i, i)
+        end
+    end
+    fs_last[ws] = now
+    fs_holder[ws] = pick and targets[pick].window.address or nil
+    return pick
+end
+
 local function recalculate(ctx)
-    local a, targets = ctx.area, ctx.targets
+    local a = ctx.area
+    local targets = {}
+    for i, t in ipairs(ctx.targets) do
+        targets[i] = t
+    end
     if #targets == 0 then return end
+
+    local w1 = targets[1].window
+    local ws = w1 and w1.workspace and w1.workspace.id or 0
+    local pick = fullscreen_pick(ws, targets)
+    if pick then
+        targets[1], targets[pick] = targets[pick], targets[1]
+    end
 
     local first = targets[1].window
     if first and first.workspace then
@@ -105,6 +150,17 @@ function M.put_on_stage()
     local current = M.stage_of[w.workspace.id]
     if current and current ~= w.address then
         hl.dispatch(hl.dsp.window.swap({ target = "address:" .. current }))
+    end
+end
+
+-- Focus view: the app goes fullscreen inside the stage (client state only),
+-- which puts it on stage at 16:9. Off the stage layout it is the ordinary
+-- whole-monitor fullscreen.
+function M.focus_view()
+    if M.window() then
+        hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = FULLSCREEN, action = "toggle" }))
+    else
+        hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen" }))
     end
 end
 

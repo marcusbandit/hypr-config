@@ -1,5 +1,6 @@
 local theme = require("lua.theme")
 local mode = require("lua.mode")
+local stage = require("lua.monitors").stage
 
 local popup_width  = 880
 local popup_height = 652
@@ -127,6 +128,36 @@ if mode.streamer then
         match     = { class = "^(obs|com\\.obsproject\\.Studio)$" },
         workspace = "7",
     })
+end
+
+-- Streamer mode, on the stage's workspaces (lua/stage.lua): an app asking for
+-- fullscreen only believes it got it, so it stays tiled and the stage layout
+-- gives it the 16:9 stage instead of the whole ultrawide.
+if mode.streamer and stage then
+    hl.window_rule({
+        name            = "streamer-stage-fullscreen",
+        match           = { workspace = "m[" .. stage .. "]s[0]" },
+        sync_fullscreen = false,
+    })
+
+    -- Games open on workspace 3, already "fullscreen" in the stage. They hold
+    -- off the idle lock themselves: Hyprland's fullscreen inhibit only counts
+    -- whole-monitor fullscreen, which a staged game never is.
+    local games = {
+        { content = "game" },
+        { class = "^steam_app_.*$" },
+        { class = "^Minecraft.*" },
+        { class = "^sober$" },
+    }
+    for i, match in ipairs(games) do
+        hl.window_rule({
+            name             = "streamer-game-" .. i,
+            match            = match,
+            workspace        = "3",
+            fullscreen_state = "0 2",
+            idle_inhibit     = "always",
+        })
+    end
 end
 
 -- Games

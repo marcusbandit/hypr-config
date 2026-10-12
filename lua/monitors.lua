@@ -105,3 +105,5 @@ end
 if stage then
     hl.env("HYPR_STAGE", stage) -- for scripts/hypr-mode aim
 end
+
+return { stage = stage }

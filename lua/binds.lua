@@ -19,6 +19,7 @@ local cursor_step = 20
 -- The stage (lua/stage.lua): no drag resizes it, so heights are on keys.
 local stage_binds = {
 	{ "SUPER + SHIFT + RETURN", stage.put_on_stage, "Put the focused window on the stage" },
+	{ "SUPER + A", stage.focus_view, "Fullscreen inside the stage" },
 	{ "SUPER + equal", stage.resize("taller"), "Stage: taller side window" },
 	{ "SUPER + minus", stage.resize("shorter"), "Stage: shorter side window" },
 }
@@ -84,7 +85,10 @@ hl.bind("SUPER + T", hl.dsp.workspace.toggle_special("torrents"))
 hl.bind("SUPER + ALT + T", hl.dsp.window.move({ workspace = "special:torrents" }))
 
 -- Windows
-hl.bind("SUPER + A", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
+-- In streamer mode SUPER+A is a stage bind (fullscreen inside the stage).
+if not mode.streamer then
+	hl.bind("SUPER + A", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
+end
 hl.bind("SUPER + D", hl.dsp.window.pseudo())
 hl.bind("SUPER + G", hl.dsp.window.pin())
 hl.bind("SUPER + Q", hl.dsp.window.close())
