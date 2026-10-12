@@ -1,6 +1,8 @@
 local theme = require("lua.theme")
+local mode = require("lua.mode")
 
-local gap = 5
+-- Bare is read at load, so a reload keeps it.
+local gap = mode.bare and 0 or 5
 
 hl.config({
     general = {
@@ -17,11 +19,11 @@ hl.config({
         resize_on_border = false,
         allow_tearing    = false,
 
-        layout = "scrolling",
+        layout = mode.streamer and "master" or "scrolling",
     },
 
     decoration = {
-        rounding       = theme.rounding.bezel,
+        rounding       = mode.bare and 0 or theme.rounding.bezel,
         rounding_power = 4.0,
 
         active_opacity   = 1.0,
@@ -58,8 +60,13 @@ hl.config({
         smart_resizing = 0,
     },
 
+    -- Streamer mode: the master is the stage. It stays centred at any window
+    -- count, and new windows open beside it (right, then left), never on it.
+    -- The centring and the 16:9 mfact are per band, in lua/monitors.lua.
     master = {
-        new_status = "master",
+        new_status                    = mode.streamer and "slave" or "master",
+        slave_count_for_center_master = mode.streamer and 0 or nil,
+        center_master_fallback        = mode.streamer and "right" or nil,
     },
 
     misc = {

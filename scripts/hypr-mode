@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# hypr-mode: SET a session mode, then reload. The reload derives the whole
+# compositor from the flags (lua/mode.lua): gaps, rounding, layout, bands,
+# binds. Nothing here touches a compositor number directly, so a mode can
+# never stay half-applied or invert.
+#
+#   bare      banditshell's chrome off (its edge.bare flag), and the
+#             compositor square: no gaps, no rounding.
+#   streamer  bare, plus the stage: master layout, the master a centred 16:9
+#             box on the stage output (lua/monitors.lua), new windows beside
+#             it never on it, the other bands stacked downward, OBS on
+#             workspace 7. If OBS is running, its capture is cropped to the
+#             stage. Leaving puts bare back to where it was before.
+#
+# Usage: hypr-mode bare|streamer [on|off|toggle]   default: toggle
+#        hypr-mode aim      crop OBS's capture to the stage (via regionpick)
+#        hypr-mode status
+#
+# Bound to SUPER+SHIFT+K (bare) and SUPER+CTRL+K (streamer) in lua/binds.lua.
+
+set -euo pipefail
+
+shell_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/banditshell/config.json"
+# lua/mode.lua builds the same path; keep the two in step.
+streamer_file="${XDG_STATE_HOME:-$HOME/.local/state}/hypr/streamer"
+
+die() {
+    printf 'hypr-mode: %s\n' "$1" >&2
+    # exec_cmd swallows stderr, so a bound press would fail silently.
+    hyprctl notify -1 4000 "rgb(ff5555)" "hypr-mode: $1" >/dev/null 2>&1 || true
+    exit 1
+}
+
+usage() {
+    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
+shell_bare() {
+    jq -r '.edge.bare // empty' "$shell_cfg" 2>/dev/null || true
+}
+
+streaming() {
+    [[ -e "$streamer_file" ]]
+}
+
+# Flip the shell's flag and wait until it is on disk: the shell writes the
+# file asynchronously, and a reload that beats the write reads the old flag.
+set_shell_bare() {
+    local want=$1
+    [[ "$(shell_bare)" == "$want" ]] && return 0
+    local border=on
+    [[ "$want" == true ]] && border=off
+    banditshell set border "$border" >/dev/null 2>&1 || return 1
+    for _ in $(seq 60); do
+        [[ "$(shell_bare)" == "$want" ]] && return 0
+        sleep 0.05
+    done
+    return 1
+}
+
+reload() {
+    hyprctl reload >/dev/null || die "hyprctl reload failed"
+}
+
+bare() {
+    local want
+    case "${1:-toggle}" in
+        on) want=true ;;
+        off) want=false ;;
+        toggle) [[ "$(shell_bare)" == true ]] && want=false || want=true ;;
+        *) usage 2 ;;
+    esac
+    if streaming && [[ "$want" == false ]]; then
+        die "streamer mode holds bare; leave it with SUPER+CTRL+K"
+    fi
+    set_shell_bare "$want" || die "banditshell did not take edge.bare=$want"
+    reload
+}
+
+streamer() {
+    local action=${1:-toggle}
+    if [[ "$action" == toggle ]]; then
+        streaming && action=off || action=on
+    fi
+    case "$action" in
+        on)
+            if ! streaming; then
+                mkdir -p "$(dirname "$streamer_file")"
+                # What bare was before, so leaving can put it back.
+                printf 'bare_before=%s\n' "$(shell_bare)" >"$streamer_file"
+            fi
+            # No shell is not fatal here: lua/mode.lua reads streamer as bare
+            # on its own, so the compositor half still goes square.
+            set_shell_bare true || hyprctl notify -1 4000 "rgb(e5c07b)" \
+                "hypr-mode: banditshell did not hide its chrome" >/dev/null 2>&1 || true
+            reload
+            if pgrep -x obs >/dev/null; then
+                aim || true
+            fi
+            ;;
+        off)
+            local before=false
+            if streaming; then
+                grep -q '^bare_before=true$' "$streamer_file" && before=true
+                rm -f "$streamer_file"
+            fi
+            set_shell_bare "$before" || hyprctl notify -1 4000 "rgb(e5c07b)" \
+                "hypr-mode: banditshell did not take edge.bare=$before" >/dev/null 2>&1 || true
+            reload
+            ;;
+        *) usage 2 ;;
+    esac
+}
+
+# The stage rect is the master's tile: mfact of the stage output's width,
+# centred, full height. The crop goes border_size inside it, onto the window
+# itself, so the focus border never shows on stream; OBS scales the few
+# pixels away. HYPR_STAGE comes from lua/monitors.lua.
+aim() {
+    command -v regionpick >/dev/null || die "regionpick not found"
+    [[ -n "${HYPR_STAGE:-}" ]] || die "no stage output on this host (lua/monitors.lua)"
+    streaming || die "not in streamer mode, there is no stage"
+    local mfact border rect
+    mfact=$(hyprctl -j getoption master:mfact | jq -r '.float')
+    border=$(hyprctl -j getoption general:border_size | jq -r '.int')
+    rect=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" --argjson f "$mfact" --argjson b "$border" '
+        (map(select(.name == $n))[0] // empty) |
+        ((if .transform % 2 == 1 then .height else .width end) / .scale | floor) as $mw |
+        ((if .transform % 2 == 1 then .width else .height end) / .scale | floor) as $mh |
+        ($mw * $f | floor) as $sw |
+        [.x + (($mw - $sw) / 2 | floor) + $b, .y + $b, $sw - 2 * $b, $mh - 2 * $b] | @tsv')
+    [[ -n "$rect" ]] || die "stage output $HYPR_STAGE is not connected"
+    # shellcheck disable=SC2086
+    regionpick set $rect
+}
+
+status() {
+    printf 'bare      %s\n' "$([[ "$(shell_bare)" == true ]] && echo on || echo off)"
+    printf 'streamer  %s\n' "$(streaming && echo on || echo off)"
+}
+
+command -v hyprctl >/dev/null || die "hyprctl not found, run inside Hyprland"
+command -v jq >/dev/null || die "jq is required"
+
+case "${1:-}" in
+    bare) bare "${2:-toggle}" ;;
+    streamer) streamer "${2:-toggle}" ;;
+    aim) aim ;;
+    status) status ;;
+    -h | --help) usage ;;
+    *) usage 2 ;;
+esac

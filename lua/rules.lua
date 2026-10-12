@@ -1,7 +1,11 @@
 local theme = require("lua.theme")
+local mode = require("lua.mode")
 
 local popup_width  = 880
 local popup_height = 652
+
+-- A rule beats decoration.rounding, so bare has to zero the rules too.
+local window_rounding = mode.bare and 0 or theme.rounding.window
 
 -- Global
 hl.window_rule({
@@ -22,7 +26,7 @@ hl.window_rule({
 hl.window_rule({
     name     = "global-rounding",
     match    = { class = "negative:^(Emulator)$" },
-    rounding = theme.rounding.window,
+    rounding = window_rounding,
 })
 
 -- Borders: two-colour string form only; the table form breaks inactive.
@@ -73,7 +77,7 @@ hl.window_rule({
 hl.window_rule({
     name     = "android-emulator-toolbar",
     match    = { class = "^(Emulator)$", title = "negative:^(Android Emulator).*" },
-    rounding = theme.rounding.window,
+    rounding = window_rounding,
 })
 
 -- Workspaces
@@ -114,6 +118,16 @@ hl.window_rule({
     match     = { class = "^(vesktop)$" },
     workspace = "special:communication",
 })
+
+-- Streamer mode: OBS opens on the side panel, off the stage. "obs" under
+-- XWayland, the desktop id under Wayland.
+if mode.streamer then
+    hl.window_rule({
+        name      = "streamer-obs-workspace",
+        match     = { class = "^(obs|com\\.obsproject\\.Studio)$" },
+        workspace = "7",
+    })
+end
 
 -- Games
 hl.window_rule({

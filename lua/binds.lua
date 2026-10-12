@@ -1,3 +1,6 @@
+local mode = require("lua.mode")
+local stage = require("lua.monitors").stage
+
 local terminal = "foot"
 local browser = "zen-browser"
 
@@ -41,11 +44,31 @@ function apply_layout_binds(name)
 			hl.bind("SUPER + " .. d.key, hl.dsp.focus({ direction = d.name }), { repeating = true })
 		end
 	end
+
+	-- Master: the focused window takes the stage (on stream in streamer
+	-- mode), and the stage snaps back to its width in the same press.
+	if name == "master" then
+		hl.bind("SUPER + SHIFT + RETURN", function()
+			local w = hl.get_active_window()
+			if not w or w.floating or not w.workspace or w.workspace.special then
+				return
+			end
+			if stage and (not w.monitor or w.monitor.name ~= stage) then
+				return
+			end
+			hl.dispatch(hl.dsp.layout("swapwithmaster master ignoremaster"))
+			hl.dispatch(hl.dsp.layout("mfact exact " .. tostring(hl.get_config("master:mfact"))))
+		end, { description = "Put the focused window on the stage" })
+	end
 end
 
-apply_layout_binds("scrolling")
+apply_layout_binds(mode.streamer and "master" or "scrolling")
 
-hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Toggle scrolling/dwindle layout" })
+-- In streamer mode the layout is the mode's; a flip would knock the stage off
+-- the OBS crop.
+if not mode.streamer then
+	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Toggle scrolling/dwindle layout" })
+end
 
 -- Workspaces
 for i = 1, workspace_count do
@@ -97,40 +120,11 @@ hl.bind("SUPER + M", hl.dsp.exec_cmd("banditshell toggle panel media"))
 hl.bind("SUPER + K", hl.dsp.exec_cmd("banditshell toggle sidebar"))
 hl.bind("SUPER + V", hl.dsp.exec_cmd("banditshell toggle panel clipboard"))
 
--- Bare mode: chrome flag and compositor gaps follow one source of truth.
-local function border_bare()
-	local cfg = (os.getenv("XDG_CONFIG_HOME") or os.getenv("HOME") .. "/.config") .. "/banditshell/config.json"
-	local f = io.open(cfg, "r")
-	if not f then
-		return nil
-	end
-	local text = f:read("*a")
-	f:close()
-	if text:match('"bare"%s*:%s*true') then
-		return true
-	end
-	if text:match('"bare"%s*:%s*false') then
-		return false
-	end
-	return nil
-end
-
-hl.bind("SUPER + SHIFT + K", function()
-	local bare = border_bare()
-	if bare == nil then
-		return
-	end
-	if bare then
-		hl.exec_cmd("banditshell set border on")
-		hl.exec_cmd("hyprctl reload")
-	else
-		hl.exec_cmd("banditshell set border off")
-		local worn = (hl.get_config("general:gaps_out") or 0) ~= 0 or (hl.get_config("decoration:rounding") or 0) ~= 0
-		if worn then
-			hl.config({ general = { gaps_out = 0, gaps_in = 0 }, decoration = { rounding = 0 } })
-		end
-	end
-end)
+-- Bare and streamer: scripts/hypr-mode sets the flag and reloads; the reload
+-- derives gaps, rounding, layout and binds from it (lua/mode.lua). While
+-- streaming, SUPER+SHIFT+K refuses, so the chrome can't land on stream.
+hl.bind("SUPER + SHIFT + K", hl.dsp.exec_cmd("~/.config/hypr/scripts/hypr-mode bare toggle"), { description = "Bare: shell chrome off, square windows" })
+hl.bind("SUPER + CTRL + K", hl.dsp.exec_cmd("~/.config/hypr/scripts/hypr-mode streamer toggle"), { description = "Streamer mode: bare plus a 16:9 stage" })
 
 -- Session
 hl.bind("SUPER + P", hl.dsp.exec_cmd("banditshell toggle panel session"))
