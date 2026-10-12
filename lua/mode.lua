@@ -10,8 +10,10 @@ local home = os.getenv("HOME") or "/home/bandit"
 local config = os.getenv("XDG_CONFIG_HOME") or (home .. "/.config")
 local state = os.getenv("XDG_STATE_HOME") or (home .. "/.local/state")
 
+M.state_dir = state .. "/hypr"
+
 -- scripts/hypr-mode builds the same path.
-M.streamer_file = state .. "/hypr/streamer"
+M.streamer_file = M.state_dir .. "/streamer"
 
 local function read(path)
     local f = io.open(path, "r")

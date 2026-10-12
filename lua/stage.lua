@@ -13,6 +13,8 @@
 -- Side windows get their height on keys instead (layout messages "taller"
 -- and "shorter", bound in lua/binds.lua). Floating windows resize as usual.
 
+local mode = require("lua.mode")
+
 local M = {}
 
 M.name = "lua:stage"
@@ -52,6 +54,77 @@ end
 -- otherwise the holder keeps it.
 local fs_last, fs_holder = {}, {}
 
+-- A reload re-registers this layout, and Hyprland drops every client
+-- fullscreen on its workspaces with it (built-in layouts keep theirs), so a
+-- staged game would fall out of fullscreen. The set is kept in a file, holders
+-- last so they are restored last and win the stage again.
+local fs_file = mode.state_dir .. "/stage-fullscreen"
+local fs_written = nil
+local fs_restore = nil
+
+local function read_lines(path)
+    local f = io.open(path, "r")
+    if not f then return {} end
+    local lines = {}
+    for line in f:lines() do
+        if line ~= "" then table.insert(lines, line) end
+    end
+    f:close()
+    return lines
+end
+
+local function save_fullscreen()
+    if fs_restore then return end
+    local lines = {}
+    for ws, set in pairs(fs_last) do
+        for addr in pairs(set) do
+            if addr ~= fs_holder[ws] then table.insert(lines, addr) end
+        end
+        if fs_holder[ws] then table.insert(lines, fs_holder[ws]) end
+    end
+    local text = table.concat(lines, "\n")
+    if text == fs_written then return end
+    -- The directory is there: it holds the streamer flag.
+    local f = io.open(fs_file, "w")
+    if not f then return end
+    f:write(text, "\n")
+    f:close()
+    fs_written = text
+end
+
+if mode.streamer then
+    fs_restore = read_lines(fs_file)
+else
+    os.remove(fs_file)
+end
+
+-- After a reload Hyprland moves the workspaces back onto this layout in a
+-- props refresh, not in the reload itself; restoring any earlier is undone.
+-- A window not back on the stage yet waits for the next refresh, three at
+-- most, so saving cannot stay switched off.
+local fs_tries = 0
+
+hl.on("config.props_refreshed", function()
+    if not fs_restore then return end
+    local live = {}
+    for _, w in ipairs(hl.get_windows()) do
+        live[w.address] = w
+    end
+    local pending = {}
+    for _, addr in ipairs(fs_restore) do
+        local w = live[addr]
+        if w and w.layout and w.layout.name == M.name then
+            if w.fullscreen_client ~= FULLSCREEN then
+                hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = FULLSCREEN, action = "set", window = "address:" .. addr }))
+            end
+        elseif w then
+            table.insert(pending, addr)
+        end
+    end
+    fs_tries = fs_tries + 1
+    fs_restore = (#pending > 0 and fs_tries < 3) and pending or nil
+end)
+
 local function fullscreen_pick(ws, targets)
     local now, pick = {}, nil
     for i, t in ipairs(targets) do
@@ -71,6 +144,7 @@ local function fullscreen_pick(ws, targets)
     end
     fs_last[ws] = now
     fs_holder[ws] = pick and targets[pick].window.address or nil
+    save_fullscreen()
     return pick
 end
 
