@@ -23,9 +23,12 @@ local function read(path)
     return text
 end
 
+-- edge.bare only: a "bare" key anywhere else in the shell's config must not
+-- turn the compositor bare.
 local function shell_bare()
     local text = read(config .. "/banditshell/config.json")
-    return text ~= nil and text:match('"bare"%s*:%s*true') ~= nil
+    local edge = text and text:match('"edge"%s*:%s*(%b{})')
+    return edge ~= nil and edge:match('"bare"%s*:%s*true') ~= nil
 end
 
 M.streamer = read(M.streamer_file) ~= nil
