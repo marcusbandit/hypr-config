@@ -17,14 +17,13 @@ hl.config({
             natural_scroll = true,
         },
     },
-
-    cursor = {
-        no_hardware_cursors = true,
-    },
 })
 
--- Map the tablet to an aspect-correct centre slice of the ultrawide.
 if host.is("banditbox") then
+    -- NVIDIA: software cursor. The AMD laptop keeps the hardware one.
+    hl.config({ cursor = { no_hardware_cursors = true } })
+
+    -- Map the tablet to an aspect-correct centre slice of the ultrawide.
     local surface = { w = 224, h = 148 }   -- Intuos Pro M active area, mm
     local panel   = { w = 5120, h = 1440 } -- HDMI-A-1
 

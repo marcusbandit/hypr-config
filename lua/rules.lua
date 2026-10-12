@@ -2,8 +2,6 @@ local theme = require("lua.theme")
 
 local popup_width  = 880
 local popup_height = 652
-local dialog_width  = 800
-local dialog_height = 600
 
 -- Global
 hl.window_rule({
@@ -42,12 +40,11 @@ hl.window_rule({
     stay_focused = true,
 })
 
+-- scripts/shell-up opens this when banditshell won't start at login.
 hl.window_rule({
-    name   = "auto-update-terminal",
-    match  = { class = "auto-update" },
-    float  = true,
-    size   = { dialog_width, dialog_height },
-    center = true,
+    name      = "banditshell-rescue",
+    match     = { class = "^(banditshell-rescue)$" },
+    workspace = "1",
 })
 
 hl.window_rule({
@@ -75,7 +72,6 @@ hl.window_rule({
 -- Workspaces
 hl.window_rule({ name = "zen-browser-workspace", match = { class = "^(zen)$" }, workspace = "1" })
 hl.window_rule({ name = "cursor-ide-workspace",  match = { class = "^(cursor)$" }, workspace = "2" })
-hl.window_rule({ name = "fleet-viewer-kiosk",    match = { class = "^(firefox)$" }, workspace = "6" })
 hl.window_rule({ name = "diablo-dashboard",      match = { class = "^(diablo)$" }, workspace = "6" })
 hl.window_rule({ name = "hytale-launcher",       match = { class = "^(Hytale-launcher)$" }, workspace = "2", center = true })
 hl.window_rule({ name = "steam-games-workspace", match = { class = "^(steam_app.*)$" }, workspace = "3" })
@@ -134,39 +130,28 @@ hl.window_rule({
     tile  = true,
 })
 
--- Waydroid
-hl.window_rule({
-    name   = "waydroid-float",
-    match  = { class = "^(Waydroid)$" },
-    float  = true,
-    size   = { 675, 1350 },
-    center = true,
-})
-
--- Hidden hosts
-hl.window_rule({
-    name             = "xwayland-videobridge-hide",
-    match            = { class = "^(xwaylandvideobridge)$" },
-    opacity          = "0.0 override",
-    no_anim          = true,
-    no_initial_focus = true,
-    max_size         = { 1, 1 },
-    no_blur          = true,
-})
-
 -- gvoice dictation host: a real Chrome window that must stay mapped (a
 -- throttled renderer stops transcribing), hidden the 1x1-transparent way.
+-- It parks in the bottom-right corner of the rightmost monitor: one
+-- monitor's own corner, so the point is always on a screen. Width and height
+-- are the mode's, so rotated and scaled outputs are converted first.
 local function layout_corner(margin)
     local x, y = 1920 - margin, 1080 - margin -- fallback: monitors not up yet
     local ok, monitors = pcall(hl.get_monitors)
-    if ok and type(monitors) == "table" and #monitors > 0 then
-        x, y = 0, 0
+    if ok and type(monitors) == "table" then
+        local right = -math.huge
         for _, mon in ipairs(monitors) do
-            x = math.max(x, mon.x + mon.width - margin)
-            y = math.max(y, mon.y + mon.height - margin)
+            local w, h = mon.width / mon.scale, mon.height / mon.scale
+            if mon.transform % 2 == 1 then
+                w, h = h, w
+            end
+            if mon.x + w > right then
+                right = mon.x + w
+                x, y = right - margin, mon.y + h - margin
+            end
         end
     end
-    return x .. " " .. y
+    return math.floor(x) .. " " .. math.floor(y)
 end
 
 for _, m in ipairs({
@@ -195,7 +180,6 @@ hl.window_rule({
     center       = true,
     border_size  = 0,
     stay_focused = true,
-    idle_inhibit = "fullscreen",
 })
 
 -- Dialogs

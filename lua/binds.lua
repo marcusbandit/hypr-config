@@ -11,7 +11,8 @@ local directions = {
 local workspace_count = 10
 local cursor_step = 20
 
--- Layout binds, swapped live by hypr-layout-toggle.
+-- Layout binds, swapped live by hypr-layout-toggle through `hyprctl eval`,
+-- so apply_layout_binds has to stay global.
 local scrolling_binds = {
 	{ "SUPER + SHIFT + RETURN", hl.dsp.layout("promote") },
 	{ "SUPER + SHIFT + CONTROL + RIGHT", hl.dsp.layout("swapcol r") },
@@ -20,7 +21,7 @@ local scrolling_binds = {
 	{ "SUPER + SHIFT + F", hl.dsp.layout("fit visible") },
 }
 
-local function apply_layout_binds(name)
+function apply_layout_binds(name)
 	for _, d in ipairs(directions) do
 		hl.unbind("SUPER + " .. d.key)
 	end
@@ -135,7 +136,7 @@ end)
 hl.bind("SUPER + P", hl.dsp.exec_cmd("banditshell toggle panel session"))
 hl.bind("SUPER + L", hl.dsp.exec_cmd("loginctl lock-session"))
 hl.bind("SUPER + SHIFT + ESCAPE", hl.dsp.exec_cmd("banditshell close"))
-hl.bind("SUPER + F4", hl.dsp.exit())
+hl.bind("SUPER + CTRL + SHIFT + F4", hl.dsp.exit())
 
 -- Clipboard
 hl.bind("SUPER + J", hl.dsp.exec_cmd("~/.local/bin/ollama-clipboard"))
@@ -146,9 +147,7 @@ hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("banditshell dispatch picker freeze
 hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a --format=hex"))
 hl.bind(
 	"SUPER + SHIFT + T",
-	hl.dsp.exec_cmd(
-		[[grim -g "$(slurp $SLURP_ARGS)" "/tmp/ocr_image.png" && tesseract "/tmp/ocr_image.png" stdout -l eng | wl-copy && rm "/tmp/ocr_image.png"]]
-	)
+	hl.dsp.exec_cmd([[region=$(slurp) && grim -g "$region" - | tesseract stdin stdout -l eng | wl-copy]])
 )
 hl.bind("SUPER + ALT + C", hl.dsp.exec_cmd("regionpick"), { description = "Region cam: pick a region" })
 hl.bind("SUPER + ALT + SHIFT + C", hl.dsp.exec_cmd("regionpick clear"), { description = "Region cam: reset" })
@@ -171,12 +170,7 @@ end)
 
 hl.bind("SUPER + W", hl.dsp.exec_cmd("banditshell toggle wallpaper"))
 
-hl.bind(
-	"CTRL + SHIFT + grave",
-	hl.dsp.exec_cmd(
-		[[~/.config/hypr/hyprland/scripts/launch_first_available.sh "gnome-system-monitor" "plasma-systemmonitor --page-name Processes" "command -v btop && foot -e fish -c btop"]]
-	)
-)
+hl.bind("CTRL + SHIFT + grave", hl.dsp.exec_cmd(terminal .. " btop"), { description = "Task manager" })
 
 -- Keyboard cursor
 for _, d in ipairs(directions) do
@@ -187,10 +181,9 @@ for _, d in ipairs(directions) do
 	)
 end
 hl.bind("SUPER + CTRL + SPACE", hl.dsp.exec_cmd("ydotool click 0xC0"))
-hl.bind("SUPER + CTRL + ALT_L + SPACE", hl.dsp.exec_cmd("ydotool click 0xC1"))
+hl.bind("SUPER + CTRL + ALT + SPACE", hl.dsp.exec_cmd("ydotool click 0xC1"))
 
--- Help
-hl.bind("SUPER + Slash", hl.dsp.global("quickshell:cheatsheetToggle"), { description = "Toggle cheatsheet" })
+-- Help: SUPER + ?
 hl.bind("SUPER + SHIFT + Slash", hl.dsp.exec_cmd("banditshell toggle panel hotkeys"), { description = "Toggle hotkey sheet" })
 
 -- Laptop

@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# shell-up: start banditshell, then the commands that need its tray host.
+#
+# If the shell won't start, a foot window opens on workspace 1 instead. It
+# shows the load errors, offers Claude Code to find and fix the cause, and
+# starts the queued commands once the shell is up, so the session picks up
+# where it stopped.
+#
+#   shell-up [CMD...]            each CMD is one shell command string
+#   shell-up --rescue [CMD...]   what the rescue window runs
+
+set -u
+
+self=$(readlink -f "$0")
+checkout="$HOME/banditshell"
+failed_log="${XDG_CACHE_HOME:-$HOME/.cache}/banditshell/failed.log"
+
+# setsid: the apps have to outlive the rescue window.
+run_queue() {
+    local cmd
+    for cmd in "$@"; do
+        setsid -f sh -c "$cmd" </dev/null >/dev/null 2>&1
+    done
+}
+
+# `banditshell start` blocks until the instance is proven up, and exits
+# non-zero when the checkout fails to load (even if a backup took over).
+if [ "${1:-}" != --rescue ]; then
+    if timeout -k 5 60 banditshell start >/dev/null 2>&1; then
+        run_queue "$@"
+        exit 0
+    fi
+    exec foot --app-id banditshell-rescue --title "banditshell didn't start" "$self" --rescue "$@"
+fi
+shift
+
+claude_state() {
+    command -v claude >/dev/null 2>&1 || { echo missing; return; }
+    if timeout -k 5 20 claude auth status 2>/dev/null | grep -q '"loggedIn": *true'; then
+        echo ready
+    else
+        echo signed-out
+    fi
+}
+
+prompt="banditshell failed to start at login: \`banditshell start\` exited non-zero. \
+Its load errors are in $failed_log, newest at the bottom. Find out why it won't start \
+and fix it. It's fixed when \`banditshell restart\` prints \"restarted\"."
+
+while :; do
+    clear
+    printf "banditshell didn't start.\n\n"
+    if [ -s "$failed_log" ]; then
+        printf 'Last errors in %s:\n\n' "$failed_log"
+        tail -n 20 "$failed_log"
+        printf '\n'
+    fi
+
+    state=$(claude_state)
+    case "$state" in
+        ready)      printf 'Enter  have Claude Code find out why and fix it\n' ;;
+        signed-out) printf 'Enter  sign in to Claude Code, then have it fix this\n' ;;
+        missing)    printf "Claude Code isn't installed, so there's no automatic fix\n" ;;
+    esac
+    printf 'r      try starting banditshell again\n'
+    printf 'q      skip it: start the rest of the session and open a shell\n'
+
+    read -rsn1 key || { run_queue "$@"; exit 1; }
+    case "$key" in
+        "")
+            [ "$state" = missing ] && continue
+            if [ "$state" = signed-out ]; then
+                claude auth login || continue
+            fi
+            (cd "$checkout" 2>/dev/null || cd "$HOME" || exit; claude "$prompt")
+            ;;
+        r | R) ;;
+        q | Q)
+            run_queue "$@"
+            exec "${SHELL:-bash}"
+            ;;
+        *) continue ;;
+    esac
+
+    clear
+    printf 'Restarting banditshell...\n'
+    if timeout -k 5 60 banditshell restart; then
+        run_queue "$@"
+        printf '\nbanditshell is up, the rest of the session is starting.\n'
+        sleep 2
+        exit 0
+    fi
+    printf '\nStill not starting. Press any key.\n'
+    read -rsn1 _
+done
