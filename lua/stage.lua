@@ -129,7 +129,8 @@ local function fullscreen_pick(ws, targets)
     local now, pick = {}, nil
     for i, t in ipairs(targets) do
         local w = t.window
-        if w and w.fullscreen_client == FULLSCREEN then
+        -- X11 windows never get the stage this way; see lua/rules.lua.
+        if w and not w.xwayland and w.fullscreen_client == FULLSCREEN then
             now[w.address] = i
             if not (fs_last[ws] or {})[w.address] then
                 pick = i
@@ -228,10 +229,14 @@ function M.put_on_stage()
 end
 
 -- Focus view: the app goes fullscreen inside the stage (client state only),
--- which puts it on stage at 16:9. Off the stage layout it is the ordinary
--- whole-monitor fullscreen.
+-- which puts it on stage at 16:9. An X11 window is only put on stage: told it
+-- is fullscreen in a tile, Wine fights it (lua/rules.lua). Off the stage
+-- layout it is the ordinary whole-monitor fullscreen.
 function M.focus_view()
-    if M.window() then
+    local w = M.window()
+    if w and w.xwayland then
+        M.put_on_stage()
+    elseif w then
         hl.dispatch(hl.dsp.window.fullscreen_state({ internal = 0, client = FULLSCREEN, action = "toggle" }))
     else
         hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen" }))

@@ -86,6 +86,7 @@ hl.window_rule({ name = "zen-browser-workspace", match = { class = "^(zen)$" }, 
 hl.window_rule({ name = "cursor-ide-workspace",  match = { class = "^(cursor)$" }, workspace = "2" })
 hl.window_rule({ name = "diablo-dashboard",      match = { class = "^(diablo)$" }, workspace = "6" })
 hl.window_rule({ name = "hytale-launcher",       match = { class = "^(Hytale-launcher)$" }, workspace = "2", center = true })
+hl.window_rule({ name = "steam-client-workspace", match = { class = "^(steam)$" }, workspace = "2" })
 hl.window_rule({ name = "steam-games-workspace", match = { class = "^(steam_app.*)$" }, workspace = "3" })
 
 -- Media
@@ -140,9 +141,18 @@ if mode.streamer and stage then
         sync_fullscreen = false,
     })
 
-    -- Games open on workspace 3, already "fullscreen" in the stage. They hold
-    -- off the idle lock themselves: Hyprland's fullscreen inhibit only counts
-    -- whole-monitor fullscreen, which a staged game never is.
+    -- Not for X11 (Proton games): told it is fullscreen in a 16:9 tile, Wine
+    -- sees a window smaller than the monitor and drops and re-asks fullscreen
+    -- several times a second. Their requests are ignored instead; set games
+    -- to windowed or borderless. Applied when a window opens.
+    hl.window_rule({
+        name           = "streamer-x11-no-fullscreen",
+        match          = { xwayland = true },
+        suppress_event = "fullscreen",
+    })
+
+    -- Games open on workspace 3. They hold off the idle lock themselves:
+    -- Hyprland's fullscreen inhibit only counts whole-monitor fullscreen.
     local games = {
         { content = "game" },
         { class = "^steam_app_.*$" },
@@ -153,9 +163,8 @@ if mode.streamer and stage then
         hl.window_rule({
             name             = "streamer-game-" .. i,
             match            = match,
-            workspace        = "3",
-            fullscreen_state = "0 2",
-            idle_inhibit     = "always",
+            workspace    = "3",
+            idle_inhibit = "always",
         })
     end
 end
