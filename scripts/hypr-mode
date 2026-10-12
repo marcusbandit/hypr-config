@@ -15,7 +15,7 @@
 #
 # Usage: hypr-mode bare|streamer [on|off|toggle]   default: toggle
 #        hypr-mode aim      crop OBS's capture to the stage (via regionpick)
-#        hypr-mode stage    print the stage rect: X Y W H
+#        hypr-mode stage    print the stage: X Y W H and refresh rate
 #        hypr-mode status
 #
 # Bound to SUPER+SHIFT+K (bare) and SUPER+CTRL+K (streamer) in lua/binds.lua.
@@ -117,18 +117,20 @@ streamer() {
     esac
 }
 
-# The stage rect, "X Y W H": lua/stage.lua's 16:9 at the stage output's full
-# height, centred. HYPR_STAGE comes from lua/monitors.lua.
+# The stage, "X Y W H HZ": lua/stage.lua's 16:9 at full height, centred on
+# the output whose workspaces run it, and that output's refresh rate. Asked of
+# Hyprland, not the environment: an app launched from a process older than the
+# stage (Steam from the launcher) has none. "lua:stage" is stage.lua's M.name.
 stage() {
-    [[ -n "${HYPR_STAGE:-}" ]] || die "no stage output on this host (lua/monitors.lua)"
     local rect
-    rect=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" '
-        (map(select(.name == $n))[0] // empty) |
+    rect=$(jq -rn --argjson ws "$(hyprctl -j workspaces)" --argjson mons "$(hyprctl -j monitors)" '
+        ($ws | map(select(.tiledLayout == "lua:stage"))[0].monitor // empty) as $n |
+        ($mons | map(select(.name == $n))[0] // empty) |
         ((if .transform % 2 == 1 then .height else .width end) / .scale | floor) as $mw |
         ((if .transform % 2 == 1 then .width else .height end) / .scale | floor) as $mh |
         ([$mh * 16 / 9 | floor, $mw] | min) as $sw |
-        [.x + (($mw - $sw) / 2 | floor), .y, $sw, $mh] | @tsv')
-    [[ -n "$rect" ]] || die "stage output $HYPR_STAGE is not connected"
+        [.x + (($mw - $sw) / 2 | floor), .y, $sw, $mh, (.refreshRate | round)] | @tsv')
+    [[ -n "$rect" ]] || die "no output runs the stage, is streamer mode on?"
     printf '%s\n' "$rect"
 }
 
@@ -137,10 +139,10 @@ stage() {
 aim() {
     command -v regionpick >/dev/null || die "regionpick not found"
     streaming || die "not in streamer mode, there is no stage"
-    local rect
+    local rect x y w h
     rect=$(stage) || exit 1
-    # shellcheck disable=SC2086
-    regionpick set $rect
+    read -r x y w h _ <<<"$rect"
+    regionpick set "$x" "$y" "$w" "$h"
 }
 
 status() {

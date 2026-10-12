@@ -102,8 +102,4 @@ for _, rule in ipairs(layout.specials or {}) do
     hl.workspace_rule(rule)
 end
 
-if stage then
-    hl.env("HYPR_STAGE", stage) -- for scripts/hypr-mode aim
-end
-
 return { stage = stage }

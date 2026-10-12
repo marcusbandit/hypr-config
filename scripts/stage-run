@@ -21,9 +21,7 @@ here=$(dirname "$(readlink -f "$0")")
 streamer_file="${XDG_STATE_HOME:-$HOME/.local/state}/hypr/streamer"
 
 if [[ -e "$streamer_file" ]] && command -v gamescope >/dev/null &&
-    read -r _ _ w h < <("$here/hypr-mode" stage 2>/dev/null); then
-    hz=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" \
-        'map(select(.name == $n))[0].refreshRate // 60 | round')
+    read -r _ _ w h hz < <("$here/hypr-mode" stage 2>/dev/null); then
     # Steam preloads its overlay into what it launches. It belongs in the
     # game; inside gamescope itself it stalls frames.
     preload=${LD_PRELOAD:-}
