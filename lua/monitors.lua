@@ -6,6 +6,7 @@
 
 local host = require("lua.host")
 local mode = require("lua.mode")
+local stage_layout = require("lua.stage") -- registered before the rules name it
 
 local ultrawide     = "HDMI-A-1"
 local vertical_side = "DP-1"
@@ -75,11 +76,11 @@ local overrides = layout.overrides or {}
 local stage = ({ banditbox = ultrawide })[host.name]
 
 -- Streamer mode re-lays every band, after the overrides so it wins: the stage
--- centres the master, the rest stack downward.
+-- output gets the 16:9 stage (lua/stage.lua), the rest stack downward.
 local function streamer_layout(monitor)
     if not mode.streamer then return {} end
     if monitor == stage then
-        return { layout = "master", layout_opts = { orientation = "center" } }
+        return { layout = stage_layout.name }
     end
     return { layout = "scrolling", layout_opts = { direction = "down" } }
 end
@@ -101,28 +102,6 @@ for _, rule in ipairs(layout.specials or {}) do
     hl.workspace_rule(rule)
 end
 
--- The master's share of the stage that makes it 16:9 at full height. Streamer
--- implies bare, so no gaps: 0.5 on the 5120x1440 ultrawide, a 2560x1440 stage.
-local function stage_mfact(output)
-    for _, monitor in ipairs(layout.outputs or {}) do
-        if monitor.output == output then
-            local w, h = monitor.mode:match("^(%d+)x(%d+)")
-            if not w then return nil end
-            w, h = tonumber(w), tonumber(h)
-            if (monitor.transform or 0) % 2 == 1 then
-                w, h = h, w
-            end
-            return math.min(h * 16 / 9 / w, 0.95)
-        end
-    end
-    return nil
-end
-
 if stage then
     hl.env("HYPR_STAGE", stage) -- for scripts/hypr-mode aim
-    if mode.streamer then
-        hl.config({ master = { mfact = stage_mfact(stage) } })
-    end
 end
-
-return { stage = stage }

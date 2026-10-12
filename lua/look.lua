@@ -19,7 +19,7 @@ hl.config({
         resize_on_border = false,
         allow_tearing    = false,
 
-        layout = mode.streamer and "master" or "scrolling",
+        layout = "scrolling",
     },
 
     decoration = {
@@ -60,13 +60,8 @@ hl.config({
         smart_resizing = 0,
     },
 
-    -- Streamer mode: the master is the stage. It stays centred at any window
-    -- count, and new windows open beside it (right, then left), never on it.
-    -- The centring and the 16:9 mfact are per band, in lua/monitors.lua.
     master = {
-        new_status                    = mode.streamer and "slave" or "master",
-        slave_count_for_center_master = mode.streamer and 0 or nil,
-        center_master_fallback        = mode.streamer and "right" or nil,
+        new_status = "master",
     },
 
     misc = {

@@ -1,5 +1,5 @@
 local mode = require("lua.mode")
-local stage = require("lua.monitors").stage
+local stage = require("lua.stage")
 
 local terminal = "foot"
 local browser = "zen-browser"
@@ -16,6 +16,13 @@ local cursor_step = 20
 
 -- Layout binds, swapped live by hypr-layout-toggle through `hyprctl eval`,
 -- so apply_layout_binds has to stay global.
+-- The stage (lua/stage.lua): no drag resizes it, so heights are on keys.
+local stage_binds = {
+	{ "SUPER + SHIFT + RETURN", stage.put_on_stage, "Put the focused window on the stage" },
+	{ "SUPER + equal", stage.resize("taller"), "Stage: taller side window" },
+	{ "SUPER + minus", stage.resize("shorter"), "Stage: shorter side window" },
+}
+
 local scrolling_binds = {
 	{ "SUPER + SHIFT + RETURN", hl.dsp.layout("promote") },
 	{ "SUPER + SHIFT + CONTROL + RIGHT", hl.dsp.layout("swapcol r") },
@@ -29,6 +36,9 @@ function apply_layout_binds(name)
 		hl.unbind("SUPER + " .. d.key)
 	end
 	for _, b in ipairs(scrolling_binds) do
+		hl.unbind(b[1])
+	end
+	for _, b in ipairs(stage_binds) do
 		hl.unbind(b[1])
 	end
 
@@ -45,27 +55,17 @@ function apply_layout_binds(name)
 		end
 	end
 
-	-- Master: the focused window takes the stage (on stream in streamer
-	-- mode), and the stage snaps back to its width in the same press.
-	if name == "master" then
-		hl.bind("SUPER + SHIFT + RETURN", function()
-			local w = hl.get_active_window()
-			if not w or w.floating or not w.workspace or w.workspace.special then
-				return
-			end
-			if stage and (not w.monitor or w.monitor.name ~= stage) then
-				return
-			end
-			hl.dispatch(hl.dsp.layout("swapwithmaster master ignoremaster"))
-			hl.dispatch(hl.dsp.layout("mfact exact " .. tostring(hl.get_config("master:mfact"))))
-		end, { description = "Put the focused window on the stage" })
+	-- Streamer mode: the core moves above, plus the stage keys.
+	if name == "stage" then
+		for _, b in ipairs(stage_binds) do
+			hl.bind(b[1], b[2], { description = b[3] })
+		end
 	end
 end
 
-apply_layout_binds(mode.streamer and "master" or "scrolling")
+apply_layout_binds(mode.streamer and "stage" or "scrolling")
 
--- In streamer mode the layout is the mode's; a flip would knock the stage off
--- the OBS crop.
+-- In streamer mode the binds are the stage's; a flip would swap them out.
 if not mode.streamer then
 	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Toggle scrolling/dwindle layout" })
 end

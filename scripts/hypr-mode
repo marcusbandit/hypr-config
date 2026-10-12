@@ -6,8 +6,8 @@
 #
 #   bare      banditshell's chrome off (its edge.bare flag), and the
 #             compositor square: no gaps, no rounding.
-#   streamer  bare, plus the stage: master layout, the master a centred 16:9
-#             box on the stage output (lua/monitors.lua), new windows beside
+#   streamer  bare, plus the stage (lua/stage.lua): a centred 16:9 box on
+#             the stage output that no drag can resize, new windows beside
 #             it never on it, the other bands stacked downward, OBS on
 #             workspace 7. If OBS is running, its capture is cropped to the
 #             stage. Leaving puts bare back to where it was before.
@@ -115,22 +115,21 @@ streamer() {
     esac
 }
 
-# The stage rect is the master's tile: mfact of the stage output's width,
-# centred, full height. The crop goes border_size inside it, onto the window
-# itself, so the focus border never shows on stream; OBS scales the few
-# pixels away. HYPR_STAGE comes from lua/monitors.lua.
+# The stage rect is lua/stage.lua's: 16:9 at the stage output's full height,
+# centred. The crop goes border_size inside it, onto the window itself, so
+# the focus border never shows on stream; OBS scales the few pixels away.
+# HYPR_STAGE comes from lua/monitors.lua.
 aim() {
     command -v regionpick >/dev/null || die "regionpick not found"
     [[ -n "${HYPR_STAGE:-}" ]] || die "no stage output on this host (lua/monitors.lua)"
     streaming || die "not in streamer mode, there is no stage"
-    local mfact border rect
-    mfact=$(hyprctl -j getoption master:mfact | jq -r '.float')
+    local border rect
     border=$(hyprctl -j getoption general:border_size | jq -r '.int')
-    rect=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" --argjson f "$mfact" --argjson b "$border" '
+    rect=$(hyprctl -j monitors | jq -r --arg n "$HYPR_STAGE" --argjson b "$border" '
         (map(select(.name == $n))[0] // empty) |
         ((if .transform % 2 == 1 then .height else .width end) / .scale | floor) as $mw |
         ((if .transform % 2 == 1 then .width else .height end) / .scale | floor) as $mh |
-        ($mw * $f | floor) as $sw |
+        ([$mh * 16 / 9 | floor, $mw] | min) as $sw |
         [.x + (($mw - $sw) / 2 | floor) + $b, .y + $b, $sw - 2 * $b, $mh - 2 * $b] | @tsv')
     [[ -n "$rect" ]] || die "stage output $HYPR_STAGE is not connected"
     # shellcheck disable=SC2086
