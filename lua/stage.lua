@@ -1,6 +1,7 @@
--- The stage: a layout for streaming, registered as "lua:stage". The first
--- window is a 16:9 box at full height, centred; the rest alternate into the
--- columns beside it (right, then left), stacked top to bottom.
+-- The stage: the default layout, and streamer mode's on the ultrawide,
+-- registered as "lua:stage". The first window is a 16:9 box at full height,
+-- centred; the rest alternate into the columns beside it (right, then left),
+-- stacked top to bottom.
 --
 -- The lock: Hyprland hands a Lua layout no resize deltas, a drag on a tiled
 -- window only re-runs recalculate, so nothing can pull the stage out of 16:9.

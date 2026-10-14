@@ -1,5 +1,6 @@
 local theme = require("lua.theme")
 local mode = require("lua.mode")
+local stage = require("lua.stage") -- registered before general.layout names it
 
 -- Bare is read at load, so a reload keeps it.
 local gap = mode.bare and 0 or 5
@@ -21,7 +22,7 @@ hl.config({
         resize_on_border = false,
         allow_tearing    = false,
 
-        layout = "scrolling",
+        layout = stage.name,
     },
 
     decoration = {
