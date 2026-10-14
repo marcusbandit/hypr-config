@@ -67,7 +67,7 @@ apply_layout_binds(mode.streamer and "stage" or "scrolling")
 
 -- In streamer mode the binds are the stage's; a flip would swap them out.
 if not mode.streamer then
-	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Toggle scrolling/dwindle layout" })
+	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Cycle layout: scrolling, stage, dwindle" })
 end
 
 -- Workspaces
