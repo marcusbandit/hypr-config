@@ -14,6 +14,12 @@ local directions = {
 local workspace_count = 10
 local cursor_step = 20
 
+-- Never stuck in a submap. ESCAPE leaves whichever one is active, even one a
+-- reload has since deleted, and still reaches the focused app. Loading the
+-- config resets too, so a reload from inside a submap cannot strand you.
+hl.bind("ESCAPE", hl.dsp.submap("reset"), { submap_universal = true, non_consuming = true })
+hl.dispatch(hl.dsp.submap("reset"))
+
 -- Layout binds, swapped live by hypr-layout-toggle through `hyprctl eval`,
 -- so apply_layout_binds has to stay global.
 -- The stage (lua/stage.lua): no drag resizes it, so heights are on keys.
@@ -146,21 +152,11 @@ hl.bind(
 hl.bind("SUPER + ALT + C", hl.dsp.exec_cmd("regionpick"), { description = "Region cam: pick a region" })
 hl.bind("SUPER + ALT + SHIFT + C", hl.dsp.exec_cmd("regionpick clear"), { description = "Region cam: reset" })
 
--- Voice
+-- Voice. While a recording runs, `voice key` also binds ALT + SPACE to cycle
+-- the language (English, Danish, Japanese, auto); every other key stays live.
 hl.bind("SUPER + R", hl.dsp.exec_cmd("voice key"))
 hl.bind("SUPER + ALT + R", hl.dsp.exec_cmd("voice key stream"))
 hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd("voice retype"))
-
--- Live only while a recording runs.
-hl.define_submap("voice", function()
-	hl.bind("SUPER + R", hl.dsp.exec_cmd("voice key"))
-	hl.bind("SUPER + ALT + R", hl.dsp.exec_cmd("voice key stream"))
-	hl.bind("J", hl.dsp.exec_cmd("voice lang ja"))
-	hl.bind("E", hl.dsp.exec_cmd("voice lang en-dk"))
-	hl.bind("D", hl.dsp.exec_cmd("voice lang da"))
-	hl.bind("A", hl.dsp.exec_cmd("voice lang auto"))
-	hl.bind("ESCAPE", hl.dsp.submap("reset"))
-end)
 
 hl.bind("SUPER + W", hl.dsp.exec_cmd("banditshell wallpaper toggle"))
 
