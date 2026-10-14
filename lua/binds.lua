@@ -107,18 +107,18 @@ hl.bind("SUPER + SHIFT + D", hl.dsp.exec_cmd("hypr-16x9"), { description = "Togg
 hl.bind("SUPER + SHIFT + CONTROL + D", hl.dsp.exec_cmd("hypr-16x9 -r 8:9"), { description = "Toggle locked 8:9 fit" })
 
 -- Apps
-hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("banditshell toggle panel launcher"))
+hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("banditshell panel launcher toggle"))
 hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind("SUPER + B", hl.dsp.exec_cmd(browser))
 hl.bind("SUPER + SHIFT + B", hl.dsp.exec_cmd(browser .. " --private-window"))
-hl.bind("SUPER + E", hl.dsp.exec_cmd("banditshell toggle panel files"))
+hl.bind("SUPER + E", hl.dsp.exec_cmd("banditshell panel files toggle"))
 
 -- Panels
-hl.bind("SUPER + Z", hl.dsp.exec_cmd("banditshell toggle panel calculator"))
-hl.bind("XF86Calculator", hl.dsp.exec_cmd("banditshell toggle panel calculator"), { locked = true })
-hl.bind("SUPER + M", hl.dsp.exec_cmd("banditshell toggle panel media"))
-hl.bind("SUPER + K", hl.dsp.exec_cmd("banditshell toggle sidebar"))
-hl.bind("SUPER + V", hl.dsp.exec_cmd("banditshell toggle panel clipboard"))
+hl.bind("SUPER + Z", hl.dsp.exec_cmd("banditshell panel calculator toggle"))
+hl.bind("XF86Calculator", hl.dsp.exec_cmd("banditshell panel calculator toggle"), { locked = true })
+hl.bind("SUPER + M", hl.dsp.exec_cmd("banditshell panel media toggle"))
+hl.bind("SUPER + K", hl.dsp.exec_cmd("banditshell screen sidebar toggle"))
+hl.bind("SUPER + V", hl.dsp.exec_cmd("banditshell panel clipboard toggle"))
 
 -- Bare and streamer: scripts/hypr-mode sets the flag and reloads; the reload
 -- derives gaps, rounding, layout and binds from it (lua/mode.lua). While
@@ -127,9 +127,9 @@ hl.bind("SUPER + SHIFT + K", hl.dsp.exec_cmd("~/.config/hypr/scripts/hypr-mode b
 hl.bind("SUPER + CTRL + K", hl.dsp.exec_cmd("~/.config/hypr/scripts/hypr-mode streamer toggle"), { description = "Streamer mode: bare plus a 16:9 stage" })
 
 -- Session
-hl.bind("SUPER + P", hl.dsp.exec_cmd("banditshell toggle panel session"))
+hl.bind("SUPER + P", hl.dsp.exec_cmd("banditshell panel session toggle"))
 hl.bind("SUPER + L", hl.dsp.exec_cmd("loginctl lock-session"))
-hl.bind("SUPER + SHIFT + ESCAPE", hl.dsp.exec_cmd("banditshell close"))
+hl.bind("SUPER + SHIFT + ESCAPE", hl.dsp.exec_cmd("banditshell panel close"))
 hl.bind("SUPER + CTRL + SHIFT + F4", hl.dsp.exit())
 
 -- Clipboard
@@ -137,7 +137,7 @@ hl.bind("SUPER + J", hl.dsp.exec_cmd("~/.local/bin/ollama-clipboard"))
 hl.bind("CTRL + ALT + V", hl.dsp.exec_cmd("env TYPE_CLIPBOARD_DEBUG=1 /home/bandit/.local/bin/type-clipboard"))
 
 -- Capture
-hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("banditshell dispatch picker freezeclip"))
+hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("banditshell screenshot copy --freeze"))
 hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a --format=hex"))
 hl.bind(
 	"SUPER + SHIFT + T",
@@ -162,7 +162,7 @@ hl.define_submap("voice", function()
 	hl.bind("ESCAPE", hl.dsp.submap("reset"))
 end)
 
-hl.bind("SUPER + W", hl.dsp.exec_cmd("banditshell toggle wallpaper"))
+hl.bind("SUPER + W", hl.dsp.exec_cmd("banditshell wallpaper toggle"))
 
 hl.bind("CTRL + SHIFT + grave", hl.dsp.exec_cmd(terminal .. " btop"), { description = "Task manager" })
 
@@ -178,7 +178,7 @@ hl.bind("SUPER + CTRL + SPACE", hl.dsp.exec_cmd("ydotool click 0xC0"))
 hl.bind("SUPER + CTRL + ALT + SPACE", hl.dsp.exec_cmd("ydotool click 0xC1"))
 
 -- Help: SUPER + ?
-hl.bind("SUPER + SHIFT + Slash", hl.dsp.exec_cmd("banditshell toggle panel hotkeys"), { description = "Toggle hotkey sheet" })
+hl.bind("SUPER + SHIFT + Slash", hl.dsp.exec_cmd("banditshell panel hotkeys toggle"), { description = "Toggle hotkey sheet" })
 
 -- Laptop
 local function media_keys(tbl)
@@ -200,14 +200,14 @@ media_keys({
 	{ "XF86AudioPrev", "playerctl previous" },
 })
 
-hl.bind("SUPER + SHIFT + Z", hl.dsp.exec_cmd("banditshell toggle panel keyboard"))
+hl.bind("SUPER + SHIFT + Z", hl.dsp.exec_cmd("banditshell panel keyboard toggle"))
 
 -- Tablet hinge is an evdev switch, not a key.
 local tablet_switch = "Lenovo Yoga Tablet Mode Control switch"
-hl.bind("switch:on:" .. tablet_switch, hl.dsp.exec_cmd("banditshell set tablet on compositor"), { locked = true })
-hl.bind("switch:off:" .. tablet_switch, hl.dsp.exec_cmd("banditshell set tablet off compositor"), { locked = true })
+hl.bind("switch:on:" .. tablet_switch, hl.dsp.exec_cmd("banditshell tablet on compositor"), { locked = true })
+hl.bind("switch:off:" .. tablet_switch, hl.dsp.exec_cmd("banditshell tablet off compositor"), { locked = true })
 
 -- Output toggle, bound twice for numlock's two numpad-zero keysyms.
 for _, key in ipairs({ "KP_0", "KP_Insert" }) do
-	hl.bind("SUPER + " .. key, hl.dsp.exec_cmd("banditshell toggle output"))
+	hl.bind("SUPER + " .. key, hl.dsp.exec_cmd("banditshell output toggle"))
 end
