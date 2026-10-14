@@ -12,7 +12,7 @@
 set -u
 
 self=$(readlink -f "$0")
-checkout="$HOME/banditshell"
+checkout="$HOME/Projects/banditshell"
 failed_log="${XDG_CACHE_HOME:-$HOME/.cache}/banditshell/failed.log"
 
 # setsid: the apps have to outlive the rescue window.
