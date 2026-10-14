@@ -1,7 +1,12 @@
 local theme = require("lua.theme")
+local mode = require("lua.mode")
+local stage = require("lua.monitors").stage
 
 local popup_width  = 880
 local popup_height = 652
+
+-- A rule beats decoration.rounding, so bare has to zero the rules too.
+local window_rounding = mode.bare and 0 or theme.rounding.window
 
 -- Global
 hl.window_rule({
@@ -22,7 +27,7 @@ hl.window_rule({
 hl.window_rule({
     name     = "global-rounding",
     match    = { class = "negative:^(Emulator)$" },
-    rounding = theme.rounding.window,
+    rounding = window_rounding,
 })
 
 -- Borders: two-colour string form only; the table form breaks inactive.
@@ -73,7 +78,7 @@ hl.window_rule({
 hl.window_rule({
     name     = "android-emulator-toolbar",
     match    = { class = "^(Emulator)$", title = "negative:^(Android Emulator).*" },
-    rounding = theme.rounding.window,
+    rounding = window_rounding,
 })
 
 -- Workspaces
@@ -81,6 +86,7 @@ hl.window_rule({ name = "zen-browser-workspace", match = { class = "^(zen)$" }, 
 hl.window_rule({ name = "cursor-ide-workspace",  match = { class = "^(cursor)$" }, workspace = "2" })
 hl.window_rule({ name = "diablo-dashboard",      match = { class = "^(diablo)$" }, workspace = "6" })
 hl.window_rule({ name = "hytale-launcher",       match = { class = "^(Hytale-launcher)$" }, workspace = "2", center = true })
+hl.window_rule({ name = "steam-client-workspace", match = { class = "^(steam)$" }, workspace = "2" })
 hl.window_rule({ name = "steam-games-workspace", match = { class = "^(steam_app.*)$" }, workspace = "3" })
 
 -- Media
@@ -114,6 +120,35 @@ hl.window_rule({
     match     = { class = "^(vesktop)$" },
     workspace = "special:communication",
 })
+
+-- Streamer mode: OBS opens on the side panel, off the stage. "obs" under
+-- XWayland, the desktop id under Wayland.
+if mode.streamer then
+    hl.window_rule({
+        name      = "streamer-obs-workspace",
+        match     = { class = "^(obs|com\\.obsproject\\.Studio)$" },
+        workspace = "7",
+    })
+end
+
+if mode.streamer and stage then
+    -- Games open on workspace 3 and hold off the idle lock even windowed on
+    -- the stage, which Hyprland's fullscreen inhibit does not cover.
+    local games = {
+        { content = "game" },
+        { class = "^steam_app_.*$" },
+        { class = "^Minecraft.*" },
+        { class = "^sober$" },
+    }
+    for i, match in ipairs(games) do
+        hl.window_rule({
+            name         = "streamer-game-" .. i,
+            match        = match,
+            workspace    = "3",
+            idle_inhibit = "always",
+        })
+    end
+end
 
 -- Games
 hl.window_rule({

@@ -1,13 +1,17 @@
 local theme = require("lua.theme")
+local mode = require("lua.mode")
 
-local gap = 5
+-- Bare is read at load, so a reload keeps it.
+local gap = mode.bare and 0 or 5
 
 hl.config({
     general = {
         gaps_in  = gap,
         gaps_out = gap * 2,
 
-        border_size = 2,
+        -- None while streaming: focus follows the mouse, and a focus ring
+        -- on stream is noise.
+        border_size = mode.streamer and 0 or 2,
 
         col = {
             active_border   = theme.border_active,
@@ -21,7 +25,7 @@ hl.config({
     },
 
     decoration = {
-        rounding       = theme.rounding.bezel,
+        rounding       = mode.bare and 0 or theme.rounding.bezel,
         rounding_power = 4.0,
 
         active_opacity   = 1.0,
@@ -46,8 +50,9 @@ hl.config({
         },
     },
 
+    -- Off while streaming: a window sliding into place is dead air on stream.
     animations = {
-        enabled = true,
+        enabled = not mode.streamer,
     },
 
     scrolling = {

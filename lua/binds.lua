@@ -1,3 +1,6 @@
+local mode = require("lua.mode")
+local stage = require("lua.stage")
+
 local terminal = "foot"
 local browser = "zen-browser"
 
@@ -13,6 +16,13 @@ local cursor_step = 20
 
 -- Layout binds, swapped live by hypr-layout-toggle through `hyprctl eval`,
 -- so apply_layout_binds has to stay global.
+-- The stage (lua/stage.lua): no drag resizes it, so heights are on keys.
+local stage_binds = {
+	{ "SUPER + SHIFT + RETURN", stage.put_on_stage, "Put the focused window on the stage" },
+	{ "SUPER + equal", stage.resize("taller"), "Stage: taller side window" },
+	{ "SUPER + minus", stage.resize("shorter"), "Stage: shorter side window" },
+}
+
 local scrolling_binds = {
 	{ "SUPER + SHIFT + RETURN", hl.dsp.layout("promote") },
 	{ "SUPER + SHIFT + CONTROL + RIGHT", hl.dsp.layout("swapcol r") },
@@ -28,6 +38,9 @@ function apply_layout_binds(name)
 	for _, b in ipairs(scrolling_binds) do
 		hl.unbind(b[1])
 	end
+	for _, b in ipairs(stage_binds) do
+		hl.unbind(b[1])
+	end
 
 	if name == "scrolling" then
 		for _, d in ipairs(directions) do
@@ -41,11 +54,21 @@ function apply_layout_binds(name)
 			hl.bind("SUPER + " .. d.key, hl.dsp.focus({ direction = d.name }), { repeating = true })
 		end
 	end
+
+	-- Streamer mode: the core moves above, plus the stage keys.
+	if name == "stage" then
+		for _, b in ipairs(stage_binds) do
+			hl.bind(b[1], b[2], { description = b[3] })
+		end
+	end
 end
 
-apply_layout_binds("scrolling")
+apply_layout_binds(mode.streamer and "stage" or "scrolling")
 
-hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Toggle scrolling/dwindle layout" })
+-- In streamer mode the binds are the stage's; a flip would swap them out.
+if not mode.streamer then
+	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Cycle layout: scrolling, stage, dwindle" })
+end
 
 -- Workspaces
 for i = 1, workspace_count do
@@ -97,40 +120,11 @@ hl.bind("SUPER + M", hl.dsp.exec_cmd("banditshell toggle panel media"))
 hl.bind("SUPER + K", hl.dsp.exec_cmd("banditshell toggle sidebar"))
 hl.bind("SUPER + V", hl.dsp.exec_cmd("banditshell toggle panel clipboard"))
 
--- Bare mode: chrome flag and compositor gaps follow one source of truth.
-local function border_bare()
-	local cfg = (os.getenv("XDG_CONFIG_HOME") or os.getenv("HOME") .. "/.config") .. "/banditshell/config.json"
-	local f = io.open(cfg, "r")
-	if not f then
-		return nil
-	end
-	local text = f:read("*a")
-	f:close()
-	if text:match('"bare"%s*:%s*true') then
-		return true
-	end
-	if text:match('"bare"%s*:%s*false') then
-		return false
-	end
-	return nil
-end
-
-hl.bind("SUPER + SHIFT + K", function()
-	local bare = border_bare()
-	if bare == nil then
-		return
-	end
-	if bare then
-		hl.exec_cmd("banditshell set border on")
-		hl.exec_cmd("hyprctl reload")
-	else
-		hl.exec_cmd("banditshell set border off")
-		local worn = (hl.get_config("general:gaps_out") or 0) ~= 0 or (hl.get_config("decoration:rounding") or 0) ~= 0
-		if worn then
-			hl.config({ general = { gaps_out = 0, gaps_in = 0 }, decoration = { rounding = 0 } })
-		end
-	end
-end)
+-- Bare and streamer: scripts/hypr-mode sets the flag and reloads; the reload
+-- derives gaps, rounding, layout and binds from it (lua/mode.lua). While
+-- streaming, SUPER+SHIFT+K refuses, so the chrome can't land on stream.
+hl.bind("SUPER + SHIFT + K", hl.dsp.exec_cmd("~/.config/hypr/scripts/hypr-mode bare toggle"), { description = "Bare: shell chrome off, square windows" })
+hl.bind("SUPER + CTRL + K", hl.dsp.exec_cmd("~/.config/hypr/scripts/hypr-mode streamer toggle"), { description = "Streamer mode: bare plus a 16:9 stage" })
 
 -- Session
 hl.bind("SUPER + P", hl.dsp.exec_cmd("banditshell toggle panel session"))
