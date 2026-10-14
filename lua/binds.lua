@@ -55,7 +55,7 @@ function apply_layout_binds(name)
 		end
 	end
 
-	-- Streamer mode: the core moves above, plus the stage keys.
+	-- The stage: the core moves above, plus the stage keys.
 	if name == "stage" then
 		for _, b in ipairs(stage_binds) do
 			hl.bind(b[1], b[2], { description = b[3] })
@@ -63,11 +63,11 @@ function apply_layout_binds(name)
 	end
 end
 
-apply_layout_binds(mode.streamer and "stage" or "scrolling")
+apply_layout_binds("stage")
 
 -- In streamer mode the binds are the stage's; a flip would swap them out.
 if not mode.streamer then
-	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Cycle layout: scrolling, stage, dwindle" })
+	hl.bind("SUPER + O", hl.dsp.exec_cmd("hypr-layout-toggle"), { description = "Cycle layout: stage, dwindle, scrolling" })
 end
 
 -- Workspaces
