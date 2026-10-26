@@ -98,7 +98,7 @@ hl.bind("SUPER + S", hl.dsp.window.float({ action = "toggle" }))
 hl.bind("SUPER + SHIFT + A", hl.dsp.exec_cmd("uxtrace record toggle --keys"), { description = "Record for an agent" })
 
 for _, d in ipairs(directions) do
-	hl.bind("SUPER + SHIFT + " .. d.key, hl.dsp.window.move({ direction = d.name }), { repeating = true })
+	hl.bind("SUPER + SHIFT + " .. d.key, stage.move(d.name), { repeating = true })
 	hl.bind("SUPER + ALT + " .. d.key, hl.dsp.window.swap({ direction = d.name }), { repeating = true })
 end
 
