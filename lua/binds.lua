@@ -99,7 +99,7 @@ hl.bind("SUPER + SHIFT + A", hl.dsp.exec_cmd("uxtrace record toggle --keys"), { 
 
 for _, d in ipairs(directions) do
 	hl.bind("SUPER + SHIFT + " .. d.key, stage.move(d.name), { repeating = true })
-	hl.bind("SUPER + ALT + " .. d.key, hl.dsp.window.swap({ direction = d.name }), { repeating = true })
+	hl.bind("SUPER + ALT + " .. d.key, stage.swap(d.name), { repeating = true })
 end
 
 -- Mouse and keyboard drag/resize
