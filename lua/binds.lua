@@ -94,12 +94,12 @@ hl.bind("SUPER + A", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind("SUPER + D", hl.dsp.window.pseudo())
 hl.bind("SUPER + G", hl.dsp.window.pin())
 hl.bind("SUPER + Q", hl.dsp.window.close())
-hl.bind("SUPER + S", hl.dsp.window.float({ action = "toggle" }))
+hl.bind("SUPER + S", stage.float_toggle)
 hl.bind("SUPER + SHIFT + A", hl.dsp.exec_cmd("uxtrace record toggle --keys"), { description = "Record for an agent" })
 
 for _, d in ipairs(directions) do
-	hl.bind("SUPER + SHIFT + " .. d.key, hl.dsp.window.move({ direction = d.name }), { repeating = true })
-	hl.bind("SUPER + ALT + " .. d.key, hl.dsp.window.swap({ direction = d.name }), { repeating = true })
+	hl.bind("SUPER + SHIFT + " .. d.key, stage.move(d.name), { repeating = true })
+	hl.bind("SUPER + ALT + " .. d.key, stage.swap(d.name), { repeating = true })
 end
 
 -- Mouse and keyboard drag/resize

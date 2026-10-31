@@ -8,7 +8,7 @@ hl.config({
         follow_mouse = 1,
         sensitivity  = 0,
 
-        scroll_factor = 0.8,
+        scroll_factor = 1.0,
 
         numlock_by_default  = true,
         special_fallthrough = true,
