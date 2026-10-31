@@ -10,6 +10,17 @@
 -- across, UP/DOWN moves it inside its column, and neither touches the stage.
 -- Whenever a window takes the stage, the one leaving it takes its old spot.
 --
+-- Pins: SUPER+G pins the focused window's column, on every workspace of that
+-- monitor at once. Whatever sat in that column on any workspace comes over
+-- and stacks below the column here, and from then on the column follows you:
+-- switching workspaces carries its windows along, tiled. A pin belongs to the
+-- column, not to a window, so whatever is dragged or moved into a pinned
+-- column is pinned, and whatever leaves it stays behind. Unpinning leaves the
+-- windows where you are.
+--
+-- Pins, spots, heights and the stage seats are saved to
+-- ~/.local/state/hypr/stage.lua, so a config reload keeps the columns.
+--
 -- The lock: Hyprland hands a Lua layout no resize deltas, a drag on a tiled
 -- window only re-runs recalculate, so nothing can pull the stage out of 16:9.
 -- Side windows get their height on keys instead (layout messages "taller"
@@ -21,8 +32,7 @@ M.name = "lua:stage"
 
 local RATIO = 16 / 9
 
--- Side window height weights by window address, 1 when unset. Reset by a
--- reload; a column then splits evenly again.
+-- Side window height weights by window address, 1 when unset.
 local weights = {}
 
 -- Spots by window address: { ws = workspace id, side = "left"|"right", key =
@@ -54,6 +64,69 @@ local lifted = {}
 -- in on the stage: { by = address of the one away, addr = stand-in, spot =
 -- the stand-in's own spot }. It goes back there when the stage window returns.
 local stand_in = {}
+
+-- Pinned columns by monitor name: pins["HDMI-A-1"] = { left = true }.
+local pins = {}
+
+local state_dir = (os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. "/.local/state")) .. "/hypr"
+local state_file = state_dir .. "/stage.lua"
+
+local function serialize(v)
+    if type(v) == "table" then
+        local keys = {}
+        for k in pairs(v) do keys[#keys + 1] = k end
+        table.sort(keys, function(x, y) return tostring(x) < tostring(y) end)
+        local out = {}
+        for _, k in ipairs(keys) do
+            out[#out + 1] = "[" .. serialize(k) .. "]=" .. serialize(v[k])
+        end
+        return "{" .. table.concat(out, ",") .. "}"
+    elseif type(v) == "string" then
+        return string.format("%q", v)
+    elseif type(v) == "number" then
+        return string.format("%.17g", v)
+    end
+    return tostring(v)
+end
+
+local saved
+local function save()
+    local text = "return " .. serialize({ pins = pins, spots = spots, weights = weights, stage_of = M.stage_of, next_key = next_key })
+    if text == saved then return end
+    saved = text
+    os.execute("mkdir -p '" .. state_dir .. "'")
+    local f = io.open(state_file .. ".tmp", "w")
+    if not f then return end
+    f:write(text, "\n")
+    f:close()
+    os.rename(state_file .. ".tmp", state_file)
+end
+
+-- Restore the last state, keeping only windows that still exist (a restart of
+-- Hyprland hands out new addresses).
+local function load()
+    local chunk = loadfile(state_file, "t", {})
+    local ok, st = pcall(chunk or error)
+    if not ok or type(st) ~= "table" then return end
+    local function alive(a) return type(a) == "string" and hl.get_window("address:" .. a) ~= nil end
+    for mon, sides in pairs(st.pins or {}) do
+        if type(sides) == "table" then pins[mon] = { left = sides.left == true or nil, right = sides.right == true or nil } end
+    end
+    for a, e in pairs(st.spots or {}) do
+        if alive(a) and type(e) == "table" and (e.side == "left" or e.side == "right") then
+            spots[a] = { ws = e.ws, side = e.side, key = e.key }
+            home[a] = e.ws
+        end
+    end
+    for a, w in pairs(st.weights or {}) do
+        if alive(a) then weights[a] = w end
+    end
+    for ws, a in pairs(st.stage_of or {}) do
+        if alive(a) then M.stage_of[ws] = a end
+    end
+    next_key = tonumber(st.next_key) or 0
+end
+load()
 
 local function weight(target)
     local w = target.window
@@ -216,8 +289,8 @@ local function recalculate(ctx)
     end
 
     if not before then
-        -- First pass since a reload: the columns were forgotten, deal them
-        -- out the old way, right then left, in Hyprland's order.
+        -- First pass since a reload: the saved spots hold; any window without
+        -- one is dealt out the old way, right then left, in Hyprland's order.
         stage = stage or targets[1]
         M.stage_of[ws] = addr(stage)
         local n = 0
@@ -244,7 +317,9 @@ local function recalculate(ctx)
                 stage = t
             elseif back[a_] then
                 table.insert(dropped, t)
-            elseif not (lifted[a_] and spot(t, ws)) then
+            elseif not spot(t, ws) then
+                -- A window with a spot here already was floated by key, or
+                -- carried over by a pin, and keeps it.
                 table.insert(new, t)
             end
             lifted[a_] = nil
@@ -318,6 +393,7 @@ local function recalculate(ctx)
     local cols = columns(targets, ws, stage)
     stack(cols.left, a.x, a.y, side, a.h)
     stack(cols.right, a.x + side + sw, a.y, a.w - side - sw, a.h)
+    save()
 end
 
 local steps = { taller = 1.25, shorter = 0.8 }
@@ -388,6 +464,7 @@ local function layout_msg(ctx, msg)
             spots[addr(t)], spots[addr(o)] = oe, e
         end
     end
+    save()
 end
 
 hl.layout.register("stage", { recalculate = recalculate, layout_msg = layout_msg })
@@ -397,7 +474,12 @@ hl.layout.register("stage", { recalculate = recalculate, layout_msg = layout_msg
 local function forget(w, keep_ws)
     local a = w and w.address
     if not a then return end
-    spots[a], home[a] = nil, nil
+    -- A spot on the workspace it went to is already its new one (that pass
+    -- can run before this event), or was set by a pin carrying it there.
+    if not (keep_ws and spots[a] and spots[a].ws == keep_ws) then
+        spots[a] = nil
+    end
+    if home[a] ~= keep_ws then home[a] = nil end
     for ws, si in pairs(stand_in) do
         if si.by == a or si.addr == a then stand_in[ws] = nil end
     end
@@ -413,6 +495,69 @@ end)
 
 hl.on("window.move_to_workspace", function(w, ws)
     forget(w, ws and ws.id)
+    save()
+end)
+
+local function stage_ws(ws)
+    return ws and not ws.special and ws.tiled_layout == M.name
+end
+
+-- Bring every window of the pinned columns on monitor mon over to workspace
+-- ws. With fresh set (the moment of pinning), the ones already here stay on
+-- top and the rest stack below them, by workspace.
+local function carry(mon, ws, fresh)
+    local p = pins[mon]
+    if not p or not (p.left or p.right) then return end
+    local target = hl.get_workspace(ws)
+    if not stage_ws(target) then return end
+    local here, away = {}, {}
+    for _, w in ipairs(hl.get_windows()) do
+        local e = spots[w.address]
+        local wws = w.workspace
+        if e and stage_ws(wws) and e.ws == wws.id and p[e.side] and not w.floating
+            and wws.monitor and wws.monitor.name == mon and M.stage_of[e.ws] ~= w.address then
+            table.insert(wws.id == ws and here or away, { w = w, e = e })
+        end
+    end
+    if fresh then
+        table.sort(here, function(x, y) return x.e.key < y.e.key end)
+        table.sort(away, function(x, y)
+            if x.e.ws ~= y.e.ws then return x.e.ws < y.e.ws end
+            return x.e.key < y.e.key
+        end)
+        for _, list in ipairs({ here, away }) do
+            for _, it in ipairs(list) do
+                next_key = next_key + 1
+                it.e.key = next_key
+            end
+        end
+    end
+    for _, it in ipairs(away) do
+        -- The spot moves first, so the pass on the new workspace finds it
+        -- whichever comes first, the pass or the move event. Animations are
+        -- off for the trip, so the column appears at once instead of fading.
+        local sel = "address:" .. it.w.address
+        it.e.ws = ws
+        hl.dispatch(hl.dsp.window.set_prop({ prop = "no_anim", value = "1", window = sel }))
+        hl.dispatch(hl.dsp.window.move({ workspace = ws, follow = false, window = sel }))
+    end
+    if #away > 0 then
+        hl.timer(function()
+            for _, it in ipairs(away) do
+                if hl.get_window("address:" .. it.w.address) then
+                    hl.dispatch(hl.dsp.window.set_prop({ prop = "no_anim", value = "unset", window = "address:" .. it.w.address }))
+                end
+            end
+        end, { timeout = 600, type = "oneshot" })
+    end
+    save()
+end
+
+hl.on("workspace.active", function()
+    for _, m in ipairs(hl.get_monitors()) do
+        local ws = m.active_workspace
+        if ws and pins[m.name] then carry(m.name, ws.id) end
+    end
 end)
 
 -- The focused window, if it is tiled on a stage.
@@ -463,6 +608,24 @@ function M.move(dir)
         end
         hl.dispatch(hl.dsp.window.move({ direction = dir }))
     end
+end
+
+-- SUPER+G. On a tiled stage window, pin or unpin its column; otherwise
+-- Hyprland's own pin (floating windows).
+function M.pin()
+    local w = M.window()
+    local e = w and not w.floating and spots[w.address]
+    if not e or e.ws ~= w.workspace.id or M.stage_of[e.ws] == w.address or not w.workspace.monitor then
+        hl.dispatch(hl.dsp.window.pin())
+        return
+    end
+    local mon = w.workspace.monitor.name
+    pins[mon] = pins[mon] or {}
+    local on = not pins[mon][e.side]
+    pins[mon][e.side] = on or nil
+    pcall(hl.notification.create, { text = (on and "Pinned " or "Unpinned ") .. e.side .. " column", timeout = 1500 })
+    if on then carry(mon, e.ws, true) end
+    save()
 end
 
 -- SUPER+S. Marks the window first, so the layout knows a window that comes
