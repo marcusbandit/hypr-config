@@ -42,8 +42,18 @@ M.stage_of = {}
 local seen = {}
 
 -- The workspace each window was last tiled on, so one back from a drag is
--- told apart from one that just arrived.
+-- told apart from one that just arrived. Moving a window to another workspace
+-- clears it, so a window that comes back that way is placed like a new one.
 local home = {}
+
+-- Windows floated by key (SUPER+S). They leave the tiled set the way a
+-- dragged one does, so this tells their return apart from a drop.
+local lifted = {}
+
+-- While the stage window is away (dragged, or floated), another window stands
+-- in on the stage: { by = address of the one away, addr = stand-in, spot =
+-- the stand-in's own spot }. It goes back there when the stage window returns.
+local stand_in = {}
 
 local function weight(target)
     local w = target.window
@@ -109,6 +119,23 @@ local function promote(ws, t, stage)
         if e then put(stage, ws, e.side, e.key) end
     end
     M.stage_of[ws] = addr(t)
+    stand_in[ws] = nil
+end
+
+-- The stage window is back: the stand-in returns to its spot.
+local function release(ws, targets)
+    local si = stand_in[ws]
+    stand_in[ws] = nil
+    if not si then return end
+    for _, t in ipairs(targets) do
+        if addr(t) == si.addr then spots[si.addr] = si.spot end
+    end
+end
+
+-- The top window of one column, else of the other.
+local function heir(targets, ws, stage, first)
+    local cols = columns(targets, ws, stage)
+    return cols[first][1] or cols[first == "left" and "right" or "left"][1]
 end
 
 -- Land a dragged window where the cursor let go of it.
@@ -116,10 +143,25 @@ local function drop(ctx, ws, t, stage)
     local c = hl.get_cursor_pos()
     local a = ctx.area
     local sw, side = frame(a)
-    if not c or side < 1 then return stage end
+    local was_stage = stand_in[ws] and stand_in[ws].by == addr(t)
+    if was_stage then
+        release(ws, ctx.targets)
+        stage = nil
+    end
+    if not c or side < 1 then
+        if was_stage then
+            M.stage_of[ws] = addr(t)
+            return t
+        end
+        return stage
+    end
 
     if c.x >= a.x + side and c.x < a.x + side + sw then
-        promote(ws, t, stage)
+        if was_stage then
+            M.stage_of[ws] = addr(t)
+        else
+            promote(ws, t, stage)
+        end
         return t
     end
 
@@ -136,15 +178,11 @@ local function drop(ctx, ws, t, stage)
         end
     end
     put(t, ws, to, key)
-    if t == stage then
+    if was_stage then
         -- The stage itself was dragged into a column: the top window of the
         -- other column, else of this one, takes the stage.
-        local other = columns(ctx.targets, ws, t)[to == "left" and "right" or "left"]
-        local heir = other[1] or columns(ctx.targets, ws, t)[to][1]
-        if heir and heir ~= t then
-            M.stage_of[ws] = addr(heir)
-            return heir
-        end
+        stage = heir(ctx.targets, ws, t, to == "left" and "right" or "left") or t
+        M.stage_of[ws] = addr(stage)
     end
     return stage
 end
@@ -166,7 +204,7 @@ local function recalculate(ctx)
         local a_ = addr(t)
         if a_ then
             now[a_] = true
-            back[a_] = home[a_] == ws
+            back[a_] = home[a_] == ws and not lifted[a_]
             home[a_] = ws
         end
     end
@@ -192,30 +230,49 @@ local function recalculate(ctx)
         before = now
     end
 
-    -- Sort out who is new and who is coming back from a drag.
-    local new, dropped = {}, {}
+    -- Sort out who is new, who is back from a drag, and who is back from
+    -- floating (that one keeps its spot).
+    local new, dropped, is_new = {}, {}, {}
     for _, t in ipairs(targets) do
         local a_ = addr(t)
         if a_ and not before[a_] then
-            if back[a_] then
+            local si = stand_in[ws]
+            if lifted[a_] and si and si.by == a_ then
+                -- The stage window, floated and tiled again: back on stage.
+                release(ws, targets)
+                M.stage_of[ws] = a_
+                stage = t
+            elseif back[a_] then
                 table.insert(dropped, t)
-            else
+            elseif not (lifted[a_] and spot(t, ws)) then
                 table.insert(new, t)
             end
+            lifted[a_] = nil
         elseif a_ and not spot(t, ws) and t ~= stage then
             table.insert(new, t)
         end
     end
+    for _, t in ipairs(new) do is_new[t] = true end
 
-    -- No stage on this workspace (it closed, or is being dragged): the first
-    -- window that is neither new nor in flight takes it.
+    -- No stage on this workspace. If its window is only away (dragged or
+    -- floated), the top side window stands in until it returns; if it
+    -- closed, the stand-in just keeps the stage.
     if not stage then
-        local is_new = {}
-        for _, t in ipairs(new) do is_new[t] = true end
-        for _, t in ipairs(targets) do
-            if not is_new[t] then stage = t break end
+        local away = M.stage_of[ws]
+        stage = heir(targets, ws, nil, "left")
+        if not stage then
+            for _, t in ipairs(targets) do
+                if not is_new[t] then stage = t break end
+            end
         end
-        stage = stage or table.remove(new, 1)
+        if not stage then
+            stage = table.remove(new, 1)
+            is_new[stage] = nil
+        end
+        if away and hl.get_window("address:" .. away) and not (stand_in[ws] and stand_in[ws].addr == addr(stage)) then
+            local e = spots[addr(stage) or ""]
+            stand_in[ws] = { by = away, addr = addr(stage), spot = e }
+        end
         M.stage_of[ws] = addr(stage)
     end
 
@@ -226,13 +283,11 @@ local function recalculate(ctx)
     if #new > 0 then
         -- The window focused before the newcomers: lowest focus history among
         -- the ones already placed (a newcomer itself usually holds 0).
-        local is_new = {}
-        for _, t in ipairs(new) do is_new[t] = true end
         local prior, best
         for _, t in ipairs(targets) do
-            local w = t.window
-            if not is_new[t] and w and (not best or w.focus_history_id < best) then
-                prior, best = t, w.focus_history_id
+            local id = t.window and t.window.focus_history_id
+            if not is_new[t] and id and id >= 0 and (not best or id < best) then
+                prior, best = t, id
             end
         end
         local cols = columns(targets, ws, stage)
@@ -337,6 +392,29 @@ end
 
 hl.layout.register("stage", { recalculate = recalculate, layout_msg = layout_msg })
 
+-- A window that leaves for good takes its state along, so an address Hyprland
+-- hands out again starts clean.
+local function forget(w, keep_ws)
+    local a = w and w.address
+    if not a then return end
+    spots[a], home[a] = nil, nil
+    for ws, si in pairs(stand_in) do
+        if si.by == a or si.addr == a then stand_in[ws] = nil end
+    end
+    for ws, s in pairs(M.stage_of) do
+        if s == a and ws ~= keep_ws then M.stage_of[ws] = nil end
+    end
+end
+
+hl.on("window.close", function(w)
+    forget(w)
+    if w and w.address then weights[w.address], lifted[w.address] = nil, nil end
+end)
+
+hl.on("window.move_to_workspace", function(w, ws)
+    forget(w, ws and ws.id)
+end)
+
 -- The focused window, if it is tiled on a stage.
 function M.window()
     local w = hl.get_active_window()
@@ -352,27 +430,47 @@ function M.put_on_stage()
     end
 end
 
+-- Whether a side window has a neighbour in its column toward dir.
+local function has_neighbour(w, e, dir)
+    for _, o in ipairs(hl.get_workspace_windows(w.workspace.id)) do
+        local oe = spots[o.address]
+        if o.address ~= w.address and not o.floating and oe and oe.ws == e.ws
+            and oe.side == e.side and o.address ~= M.stage_of[e.ws]
+            and (dir == "up" and oe.key < e.key or dir == "down" and oe.key > e.key) then
+            return true
+        end
+    end
+    return false
+end
+
 -- SUPER+SHIFT+direction. On a stage, LEFT/RIGHT carry a side window into the
--- other column, UP/DOWN move it inside its column, and the stage window stays
--- put. Pointing outward from a column, and every other layout, is the stock
--- move (onto another monitor).
+-- other column and UP/DOWN move it inside its column; neither touches the
+-- stage. The stage window itself, a side window pointing out of its column,
+-- and every other layout get the stock move (onto another monitor).
 function M.move(dir)
     return function()
         local w = M.window()
-        if w then
-            if M.stage_of[w.workspace.id] == w.address then return end
-            local e = spots[w.address]
-            if dir == "up" or dir == "down" then
+        local e = w and spots[w.address]
+        if w and e and e.ws == w.workspace.id and M.stage_of[e.ws] ~= w.address then
+            if (dir == "up" or dir == "down") and has_neighbour(w, e, dir) then
                 hl.dispatch(hl.dsp.layout("shift " .. dir))
                 return
             end
-            if e and e.side ~= dir then
+            if (dir == "left" or dir == "right") and e.side ~= dir then
                 hl.dispatch(hl.dsp.layout("side " .. dir))
                 return
             end
         end
         hl.dispatch(hl.dsp.window.move({ direction = dir }))
     end
+end
+
+-- SUPER+S. Marks the window first, so the layout knows a window that comes
+-- back tiled was floated, not dragged.
+function M.float_toggle()
+    local w = hl.get_active_window()
+    if w then lifted[w.address] = true end
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
 end
 
 -- SUPER+ALT+direction: trade places with the neighbouring window. Taking or
