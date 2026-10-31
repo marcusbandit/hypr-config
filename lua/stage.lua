@@ -534,9 +534,21 @@ local function carry(mon, ws, fresh)
     end
     for _, it in ipairs(away) do
         -- The spot moves first, so the pass on the new workspace finds it
-        -- whichever comes first, the pass or the move event.
+        -- whichever comes first, the pass or the move event. Animations are
+        -- off for the trip, so the column appears at once instead of fading.
+        local sel = "address:" .. it.w.address
         it.e.ws = ws
-        hl.dispatch(hl.dsp.window.move({ workspace = ws, follow = false, window = "address:" .. it.w.address }))
+        hl.dispatch(hl.dsp.window.set_prop({ prop = "no_anim", value = "1", window = sel }))
+        hl.dispatch(hl.dsp.window.move({ workspace = ws, follow = false, window = sel }))
+    end
+    if #away > 0 then
+        hl.timer(function()
+            for _, it in ipairs(away) do
+                if hl.get_window("address:" .. it.w.address) then
+                    hl.dispatch(hl.dsp.window.set_prop({ prop = "no_anim", value = "unset", window = "address:" .. it.w.address }))
+                end
+            end
+        end, { timeout = 600, type = "oneshot" })
     end
     save()
 end
