@@ -68,9 +68,6 @@ local stand_in = {}
 -- Pinned columns by monitor name: pins["HDMI-A-1"] = { left = true }.
 local pins = {}
 
--- Pinned-column windows floating through a workspace switch, by address.
-local riding = {}
-
 local state_dir = (os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. "/.local/state")) .. "/hypr"
 local state_file = state_dir .. "/stage.lua"
 
@@ -493,7 +490,7 @@ end
 
 hl.on("window.close", function(w)
     forget(w)
-    if w and w.address then weights[w.address], lifted[w.address], riding[w.address] = nil, nil, nil end
+    if w and w.address then weights[w.address], lifted[w.address] = nil, nil end
 end)
 
 hl.on("window.move_to_workspace", function(w, ws)
@@ -544,80 +541,10 @@ local function carry(mon, ws, fresh)
     save()
 end
 
--- Riding a workspace switch. A tiled window belongs to one workspace, so it
--- would slide out with the old one and fade in on the new one. For the length
--- of the slide the pinned column's windows float at their exact box with
--- Hyprland's own pin, which keeps a window still on screen through the
--- animation; then they tile again, in the same spot, on the new workspace.
-local ride_timer
-
-local function sel(a) return "address:" .. a end
-
-local function xy(v)
-    if type(v) == "table" then return v.x or v[1], v.y or v[2] end
-end
-
-local function settle()
-    ride_timer = nil
-    for a in pairs(riding) do
-        local w = hl.get_window(sel(a))
-        local ws = w and w.monitor and w.monitor.active_workspace
-        if w and ws and spots[a] then
-            spots[a].ws = ws.id
-            lifted[a] = true
-            hl.dispatch(hl.dsp.window.pin({ action = "unset", window = sel(a) }))
-            if not w.workspace or w.workspace.id ~= ws.id then
-                hl.dispatch(hl.dsp.window.move({ workspace = ws.id, follow = false, window = sel(a) }))
-            end
-            hl.dispatch(hl.dsp.window.float({ action = "unset", window = sel(a) }))
-        end
-        if w then
-            hl.dispatch(hl.dsp.window.tag({ tag = "-stageride", window = sel(a) }))
-            hl.dispatch(hl.dsp.window.set_prop({ prop = "no_anim", value = "unset", window = sel(a) }))
-        end
-    end
-    riding = {}
-    save()
-end
-
-local function ride(mon, ws)
-    local p = pins[mon]
-    if not p or not (p.left or p.right) then return end
-    local target = hl.get_workspace(ws)
-    if not stage_ws(target) then return end
-    local any = false
-    for _, w in ipairs(hl.get_windows()) do
-        local a = w.address
-        local e = spots[a]
-        local wws = w.workspace
-        if e and not riding[a] and stage_ws(wws) and wws.id ~= ws and e.ws == wws.id and p[e.side]
-            and not w.floating and wws.monitor and wws.monitor.name == mon and M.stage_of[e.ws] ~= a then
-            local x, y = xy(w.at)
-            local bw, bh = xy(w.size)
-            if x and bw then
-                riding[a], lifted[a], any = true, true, true
-                e.ws = ws
-                hl.dispatch(hl.dsp.window.set_prop({ prop = "no_anim", value = "1", window = sel(a) }))
-                hl.dispatch(hl.dsp.window.tag({ tag = "+stageride", window = sel(a) }))
-                hl.dispatch(hl.dsp.window.float({ action = "set", window = sel(a) }))
-                hl.dispatch(hl.dsp.window.resize({ x = bw, y = bh, window = sel(a) }))
-                hl.dispatch(hl.dsp.window.move({ x = x, y = y, window = sel(a) }))
-                hl.dispatch(hl.dsp.window.pin({ action = "set", window = sel(a) }))
-            end
-        end
-    end
-    if any or next(riding) then
-        -- Another switch mid-slide keeps them riding until the last one ends.
-        if ride_timer then ride_timer:set_enabled(false) end
-        local slide = hl.get_config("animations.enabled") and 500 or 30
-        ride_timer = hl.timer(settle, { timeout = slide, type = "oneshot" })
-    end
-end
-
 hl.on("workspace.active", function()
     for _, m in ipairs(hl.get_monitors()) do
         local ws = m.active_workspace
-        if ws and not ws.special and pins[m.name] then ride(m.name, ws.id) end
+        if ws and pins[m.name] then carry(m.name, ws.id) end
     end
 end)
 

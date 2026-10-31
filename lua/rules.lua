@@ -39,8 +39,7 @@ hl.window_rule({
 
 hl.window_rule({
     name         = "pinned-border",
-    -- Not a pinned column riding a workspace switch (lua/stage.lua).
-    match        = { pin = true, tag = "negative:stageride" },
+    match        = { pin = true },
     border_color = theme.pinned.active .. " " .. theme.pinned.inactive,
 })
 
